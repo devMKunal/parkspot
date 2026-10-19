@@ -19,6 +19,7 @@ npm run dev                   # http://localhost:3000/health
 | `npm test`                                    | Unit + HTTP tests (in-memory fakes, no DB)    |
 | `npm run test:int`                            | Repository tests against an in-memory MongoDB |
 | `npm run typecheck` / `lint` / `format:check` | Static checks, same as CI                     |
+| `npm run seed`                                | Reset the DB to 20 demo lots in Pune          |
 | `npm run build && npm start`                  | Compiled production run                       |
 
 ## Layout
