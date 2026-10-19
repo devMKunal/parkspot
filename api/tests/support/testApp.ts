@@ -2,11 +2,13 @@ import { createApp } from '../../src/app.js';
 import { AuthService } from '../../src/modules/auth/auth.service.js';
 import { TokenService } from '../../src/modules/auth/token.service.js';
 import { BookingService } from '../../src/modules/bookings/booking.service.js';
+import { ExtensionService } from '../../src/modules/bookings/extension.service.js';
 import { PaymentService } from '../../src/modules/payments/payment.service.js';
 import {
   FakePasswordHasher,
   FakePaymentGateway,
   InMemoryBookingRepository,
+  InMemoryExtensionRepository,
   InMemoryLotRepository,
   InMemoryPaymentRepository,
   InMemoryRefreshTokenRepository,
@@ -29,14 +31,25 @@ export function buildTestApp(opts: TestAppOptions = {}) {
   const slots = new InMemorySlotRepository();
   const holds = new InMemorySlotHoldRepository();
   const bookingRepo = new InMemoryBookingRepository();
+  const extensionRepo = new InMemoryExtensionRepository();
   const payments = opts.payments === undefined ? new FakePaymentGateway() : opts.payments;
   const hasher = new FakePasswordHasher();
   const tokens = new TokenService(TEST_TOKEN_CONFIG, opts.now);
   const auth = new AuthService({ users, refreshTokens, hasher, tokens, now: opts.now });
   const bookings = new BookingService({
     bookings: bookingRepo,
+    extensions: extensionRepo,
     lots,
     slots,
+    holds,
+    payments,
+    lockMinutes: 10,
+    now: opts.now,
+  });
+  const extensions = new ExtensionService({
+    bookings: bookingRepo,
+    extensions: extensionRepo,
+    lots,
     holds,
     payments,
     lockMinutes: 10,
@@ -46,7 +59,7 @@ export function buildTestApp(opts: TestAppOptions = {}) {
   const paymentService = new PaymentService({
     gateway: payments,
     bookingService: bookings,
-    bookings: bookingRepo,
+    extensionService: extensions,
     payments: paymentRepo,
   });
   const app = createApp({
@@ -55,6 +68,7 @@ export function buildTestApp(opts: TestAppOptions = {}) {
     users,
     lots,
     bookings,
+    extensions,
     payments: paymentService,
     rateLimit: false,
   });
@@ -65,6 +79,7 @@ export function buildTestApp(opts: TestAppOptions = {}) {
     slots,
     holds,
     bookingRepo,
+    extensionRepo,
     payments,
     paymentRepo,
     refreshTokens,

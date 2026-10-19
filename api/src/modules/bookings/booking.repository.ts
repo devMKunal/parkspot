@@ -4,7 +4,11 @@ import type { BookingRecord } from './booking.types.js';
 
 export type CreateBookingInput = Omit<
   BookingRecord,
-  'createdAt' | 'provider' | 'orderId' | 'paymentId'
+  'createdAt' | 'provider' | 'orderId' | 'paymentId' | 'passCode' | 'endedAt' | 'extensionsPaise'
+>;
+
+export type BookingPatch = Partial<
+  Pick<BookingRecord, 'lockExpiresAt' | 'paymentId' | 'passCode' | 'endedAt'>
 >;
 
 export interface BookingRepository {
@@ -20,7 +24,17 @@ export interface BookingRepository {
     id: string,
     from: BookingStatus[],
     to: BookingStatus,
-    patch?: Partial<Pick<BookingRecord, 'lockExpiresAt' | 'paymentId'>>,
+    patch?: BookingPatch,
+  ): Promise<BookingRecord | null>;
+  /**
+   * Adds paid extra time, only if the booking is still live and still ends at `fromEnd`
+   * (so the same extension can never be applied twice). Null if that no longer holds.
+   */
+  applyExtension(
+    id: string,
+    fromEnd: Date,
+    newEnd: Date,
+    addPaise: number,
   ): Promise<BookingRecord | null>;
   attachOrder(id: string, provider: string, orderId: string): Promise<void>;
   findByOrderId(orderId: string): Promise<BookingRecord | null>;
@@ -37,12 +51,15 @@ const toRecord = (doc: BookingDoc): BookingRecord => ({
   start: doc.start,
   end: doc.end,
   amountPaise: doc.amountPaise,
+  extensionsPaise: doc.extensionsPaise ?? 0,
   currency: doc.currency,
   status: doc.status,
   lockExpiresAt: doc.lockExpiresAt ?? null,
   provider: doc.provider ?? null,
   orderId: doc.orderId ?? null,
   paymentId: doc.paymentId ?? null,
+  passCode: doc.passCode ?? null,
+  endedAt: doc.endedAt ?? null,
   createdAt: doc.createdAt,
 });
 
@@ -76,7 +93,7 @@ export class MongoBookingRepository implements BookingRepository {
     id: string,
     from: BookingStatus[],
     to: BookingStatus,
-    patch: Partial<Pick<BookingRecord, 'lockExpiresAt' | 'paymentId'>> = {},
+    patch: BookingPatch = {},
   ): Promise<BookingRecord | null> {
     if (!mongoose.isValidObjectId(id)) return null;
     const doc = await BookingModel.findOneAndUpdate(
@@ -89,6 +106,20 @@ export class MongoBookingRepository implements BookingRepository {
 
   async attachOrder(id: string, provider: string, orderId: string): Promise<void> {
     await BookingModel.updateOne({ _id: id }, { $set: { provider, orderId } });
+  }
+
+  async applyExtension(
+    id: string,
+    fromEnd: Date,
+    newEnd: Date,
+    addPaise: number,
+  ): Promise<BookingRecord | null> {
+    const doc = await BookingModel.findOneAndUpdate(
+      { _id: id, end: fromEnd, status: { $in: ['CONFIRMED', 'ACTIVE'] } },
+      { $set: { end: newEnd }, $inc: { extensionsPaise: addPaise } },
+      { new: true },
+    );
+    return doc ? toRecord(doc) : null;
   }
 
   async findByOrderId(orderId: string): Promise<BookingRecord | null> {

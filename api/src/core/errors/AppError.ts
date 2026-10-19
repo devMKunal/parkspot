@@ -10,6 +10,11 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'LOT_FULL'
   | 'BOOKING_NOT_CANCELLABLE'
+  | 'PASS_CODE_INVALID'
+  | 'CHECKIN_NOT_ALLOWED'
+  | 'EXTENSION_NOT_ALLOWED'
+  | 'EXTENSION_UNAVAILABLE'
+  | 'END_NOT_ALLOWED'
   | 'RATE_LIMITED'
   | 'PAYMENT_PROVIDER_ERROR'
   | 'PAYMENT_SIGNATURE_INVALID'
@@ -46,6 +51,13 @@ export const Errors = {
   lotFull: () => new AppError(409, 'LOT_FULL', 'No free slot in this lot for that time'),
   bookingNotCancellable: (status: string) =>
     new AppError(409, 'BOOKING_NOT_CANCELLABLE', `A ${status} booking can't be cancelled`),
+  passCodeInvalid: () => new AppError(400, 'PASS_CODE_INVALID', 'Pass code does not match'),
+  checkinNotAllowed: (why: string) => new AppError(409, 'CHECKIN_NOT_ALLOWED', why),
+  extensionNotAllowed: (why: string) => new AppError(409, 'EXTENSION_NOT_ALLOWED', why),
+  extensionUnavailable: () =>
+    new AppError(409, 'EXTENSION_UNAVAILABLE', 'The slot is booked right after your time'),
+  endNotAllowed: (status: string) =>
+    new AppError(409, 'END_NOT_ALLOWED', `A ${status} booking can't be ended`),
   paymentsUnavailable: () =>
     new AppError(503, 'PAYMENTS_UNAVAILABLE', 'Payments are not configured on this server'),
   paymentSignatureInvalid: () =>

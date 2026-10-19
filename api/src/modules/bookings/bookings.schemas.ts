@@ -24,3 +24,14 @@ export const ListBookingsQuery = z.object({
 });
 
 export type CreateBookingInput = z.infer<typeof CreateBookingBody>;
+
+export const CheckInBody = z.object({ passCode: z.string().min(1).max(32) });
+
+export const ExtendBody = z.object({
+  minutes: z
+    .number()
+    .int()
+    .min(15)
+    .max(240)
+    .refine((m) => m % 15 === 0, 'Minutes must be a multiple of 15'),
+});

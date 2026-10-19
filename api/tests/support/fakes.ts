@@ -21,10 +21,16 @@ import type {
 } from '../../src/modules/lots/slot.repository.js';
 import type { BookingStatus } from '../../src/modules/bookings/booking.model.js';
 import type {
+  BookingPatch,
   BookingRepository,
   CreateBookingInput,
 } from '../../src/modules/bookings/booking.repository.js';
-import type { BookingRecord } from '../../src/modules/bookings/booking.types.js';
+import type { BookingRecord, ExtensionRecord } from '../../src/modules/bookings/booking.types.js';
+import type { ExtensionStatus } from '../../src/modules/bookings/booking.model.js';
+import type {
+  CreateExtensionInput,
+  ExtensionRepository,
+} from '../../src/modules/bookings/extension.repository.js';
 import type {
   CheckoutResult,
   CreateOrderInput,
@@ -239,6 +245,13 @@ export class InMemorySlotHoldRepository implements SlotHoldRepository {
     for (const [k, row] of this.rows) if (row.bookingId === bookingId) this.rows.delete(k);
   }
 
+  async releaseFrom(ownerIds: string[], from: Date) {
+    for (const [k, row] of this.rows) {
+      if (ownerIds.includes(row.bookingId) && row.bucketStart >= from.getTime())
+        this.rows.delete(k);
+    }
+  }
+
   async confirmBooking(bookingId: string) {
     const mine = this.holdsOf(bookingId);
     for (const row of mine) row.expiresAt = null;
@@ -263,6 +276,9 @@ export class InMemoryBookingRepository implements BookingRepository {
       provider: null,
       orderId: null,
       paymentId: null,
+      passCode: null,
+      endedAt: null,
+      extensionsPaise: 0,
       createdAt: new Date(Date.now() + this.rows.size), // keeps creation order stable
     };
     this.rows.set(row.id, row);
@@ -281,15 +297,18 @@ export class InMemoryBookingRepository implements BookingRepository {
       .map((b) => ({ ...b }));
   }
 
-  async transition(
-    id: string,
-    from: BookingStatus[],
-    to: BookingStatus,
-    patch: Partial<Pick<BookingRecord, 'lockExpiresAt' | 'paymentId'>> = {},
-  ) {
+  async transition(id: string, from: BookingStatus[], to: BookingStatus, patch: BookingPatch = {}) {
     const row = this.rows.get(id);
     if (!row || !from.includes(row.status)) return null;
     Object.assign(row, patch, { status: to });
+    return { ...row };
+  }
+
+  async applyExtension(id: string, fromEnd: Date, newEnd: Date, addPaise: number) {
+    const row = this.rows.get(id);
+    if (!row || row.end.getTime() !== fromEnd.getTime()) return null;
+    if (row.status !== 'CONFIRMED' && row.status !== 'ACTIVE') return null;
+    Object.assign(row, { end: newEnd, extensionsPaise: row.extensionsPaise + addPaise });
     return { ...row };
   }
 
@@ -399,5 +418,47 @@ export class InMemoryPaymentRepository implements PaymentRepository {
   async setStatus(paymentId: string, status: PaymentStatus) {
     const row = this.rows.get(paymentId);
     if (row) row.status = status;
+  }
+}
+
+export class InMemoryExtensionRepository implements ExtensionRepository {
+  readonly rows = new Map<string, ExtensionRecord>();
+
+  newId() {
+    return randomUUID();
+  }
+
+  async create(input: CreateExtensionInput) {
+    const row: ExtensionRecord = { ...input, orderId: null, paymentId: null };
+    this.rows.set(row.id, row);
+    return { ...row };
+  }
+
+  async findByOrderId(orderId: string) {
+    const row = [...this.rows.values()].find((e) => e.orderId === orderId);
+    return row ? { ...row } : null;
+  }
+
+  async listByBooking(bookingId: string, statuses?: ExtensionStatus[]) {
+    return [...this.rows.values()]
+      .filter((e) => e.bookingId === bookingId && (!statuses || statuses.includes(e.status)))
+      .map((e) => ({ ...e }));
+  }
+
+  async transition(
+    id: string,
+    from: ExtensionStatus[],
+    to: ExtensionStatus,
+    patch: Partial<Pick<ExtensionRecord, 'lockExpiresAt' | 'paymentId'>> = {},
+  ) {
+    const row = this.rows.get(id);
+    if (!row || !from.includes(row.status)) return null;
+    Object.assign(row, patch, { status: to });
+    return { ...row };
+  }
+
+  async attachOrder(id: string, orderId: string) {
+    const row = this.rows.get(id);
+    if (row) row.orderId = orderId;
   }
 }
