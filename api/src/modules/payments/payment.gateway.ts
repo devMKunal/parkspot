@@ -15,12 +15,35 @@ export interface CreatedOrder {
   currency: 'INR';
 }
 
+/** What the checkout SDK hands the app on success, forwarded to the server as-is. */
+export interface CheckoutResult {
+  orderId: string;
+  paymentId: string;
+  signature: string;
+}
+
+/** A payment the provider says succeeded, normalised from a webhook event. */
+export interface CapturedPayment {
+  orderId: string;
+  paymentId: string;
+  amountPaise: number;
+  currency: string;
+}
+
+export type WebhookEvent =
+  { kind: 'payment.captured'; payment: CapturedPayment } | { kind: 'ignored'; type: string };
+
 /** Server-side gateway port. Razorpay today; Stripe slots in behind the same interface. */
 export interface PaymentGateway {
   readonly provider: PaymentProvider;
   /** Public key the app passes to the checkout SDK. Safe to send to clients. */
   readonly publicKey: string;
   createOrder(input: CreateOrderInput): Promise<CreatedOrder>;
+  /** True only if the checkout result was signed by the provider for this order. */
+  verifyCheckout(result: CheckoutResult): boolean;
+  /** Verifies the signature over the exact raw body, then parses it. Null if forged. */
+  parseWebhook(rawBody: Buffer, signature: string | undefined): WebhookEvent | null;
+  refund(paymentId: string, amountPaise: number): Promise<void>;
 }
 
 export class PaymentProviderError extends Error {

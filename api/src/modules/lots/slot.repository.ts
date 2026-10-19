@@ -31,6 +31,11 @@ export interface SlotHoldRepository {
   tryClaim(input: ClaimInput, now: Date): Promise<boolean>;
   /** Removes all holds of the booking (cancel, failure). Idempotent. */
   releaseBooking(bookingId: string): Promise<void>;
+  /**
+   * Makes the booking's remaining holds permanent (paid). Returns how many holds it still owns,
+   * which is fewer than its buckets if a lapsed lock was taken over by someone else.
+   */
+  confirmBooking(bookingId: string): Promise<number>;
 }
 
 export class MongoSlotRepository implements SlotRepository {
@@ -85,6 +90,14 @@ export class MongoSlotHoldRepository implements SlotHoldRepository {
   async releaseBooking(bookingId: string): Promise<void> {
     if (!mongoose.isValidObjectId(bookingId)) return;
     await SlotHoldModel.deleteMany({ bookingId: new Types.ObjectId(bookingId) });
+  }
+
+  async confirmBooking(bookingId: string): Promise<number> {
+    const result = await SlotHoldModel.updateMany(
+      { bookingId: new Types.ObjectId(bookingId) },
+      { $set: { expiresAt: null } },
+    );
+    return result.matchedCount;
   }
 }
 

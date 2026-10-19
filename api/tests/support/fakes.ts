@@ -26,10 +26,19 @@ import type {
 } from '../../src/modules/bookings/booking.repository.js';
 import type { BookingRecord } from '../../src/modules/bookings/booking.types.js';
 import type {
+  CheckoutResult,
   CreateOrderInput,
   CreatedOrder,
   PaymentGateway,
+  WebhookEvent,
 } from '../../src/modules/payments/payment.gateway.js';
+import { hmacSha256Hex } from '../../src/modules/payments/hmac.js';
+import type { PaymentStatus } from '../../src/modules/payments/payment.model.js';
+import type {
+  PaymentRecordInput,
+  PaymentRepository,
+} from '../../src/modules/payments/payment.repository.js';
+import { RazorpayGateway } from '../../src/modules/payments/razorpay.gateway.js';
 
 /** In-memory repositories with the same contracts as the Mongo ones, for fast unit tests. */
 export class InMemoryUserRepository implements UserRepository {
@@ -230,6 +239,12 @@ export class InMemorySlotHoldRepository implements SlotHoldRepository {
     for (const [k, row] of this.rows) if (row.bookingId === bookingId) this.rows.delete(k);
   }
 
+  async confirmBooking(bookingId: string) {
+    const mine = this.holdsOf(bookingId);
+    for (const row of mine) row.expiresAt = null;
+    return mine.length;
+  }
+
   holdsOf(bookingId: string) {
     return [...this.rows.values()].filter((r) => r.bookingId === bookingId);
   }
@@ -282,13 +297,33 @@ export class InMemoryBookingRepository implements BookingRepository {
     const row = this.rows.get(id);
     if (row) Object.assign(row, { provider, orderId });
   }
+
+  async findByOrderId(orderId: string) {
+    const row = [...this.rows.values()].find((b) => b.orderId === orderId);
+    return row ? { ...row } : null;
+  }
+
+  async reassignSlot(id: string, slotId: string, slotLabel: string) {
+    const row = this.rows.get(id);
+    if (row) Object.assign(row, { slotId, slotLabel });
+  }
 }
 
+export const FAKE_KEY_SECRET = 'fake_key_secret';
+export const FAKE_WEBHOOK_SECRET = 'fake_webhook_secret';
+
+/** Behaves like Razorpay, including real HMAC signatures, without the network. */
 export class FakePaymentGateway implements PaymentGateway {
   readonly provider = 'razorpay' as const;
   readonly publicKey = 'rzp_test_fake';
   readonly orders: CreateOrderInput[] = [];
+  readonly refunds: { paymentId: string; amountPaise: number }[] = [];
   failNext = false;
+  private readonly real = new RazorpayGateway({
+    keyId: this.publicKey,
+    keySecret: FAKE_KEY_SECRET,
+    webhookSecret: FAKE_WEBHOOK_SECRET,
+  });
 
   async createOrder(input: CreateOrderInput): Promise<CreatedOrder> {
     if (this.failNext) {
@@ -302,5 +337,67 @@ export class FakePaymentGateway implements PaymentGateway {
       amountPaise: input.amountPaise,
       currency: input.currency,
     };
+  }
+
+  verifyCheckout(result: CheckoutResult) {
+    return this.real.verifyCheckout(result);
+  }
+
+  parseWebhook(rawBody: Buffer, signature: string | undefined): WebhookEvent | null {
+    return this.real.parseWebhook(rawBody, signature);
+  }
+
+  async refund(paymentId: string, amountPaise: number) {
+    this.refunds.push({ paymentId, amountPaise });
+  }
+
+  /** What Razorpay checkout returns to the app after a successful payment. */
+  static checkoutSuccess(orderId: string, paymentId = `pay_${orderId}`): CheckoutResult {
+    return {
+      orderId,
+      paymentId,
+      signature: hmacSha256Hex(FAKE_KEY_SECRET, `${orderId}|${paymentId}`),
+    };
+  }
+
+  /** A signed payment.captured webhook body, as Razorpay would POST it. */
+  static capturedWebhook(orderId: string, paymentId: string, amountPaise: number) {
+    const body = JSON.stringify({
+      event: 'payment.captured',
+      payload: {
+        payment: {
+          entity: {
+            id: paymentId,
+            order_id: orderId,
+            amount: amountPaise,
+            currency: 'INR',
+            status: 'captured',
+          },
+        },
+      },
+    });
+    return { body, signature: hmacSha256Hex(FAKE_WEBHOOK_SECRET, body) };
+  }
+}
+
+export class InMemoryPaymentRepository implements PaymentRepository {
+  readonly rows = new Map<string, PaymentRecordInput & { status: PaymentStatus }>();
+
+  async recordCaptured(input: PaymentRecordInput) {
+    if (!this.rows.has(input.paymentId)) {
+      this.rows.set(input.paymentId, { ...input, status: 'CAPTURED' });
+    }
+  }
+
+  async claimRefund(paymentId: string) {
+    const row = this.rows.get(paymentId);
+    if (!row || row.status !== 'CAPTURED') return false;
+    row.status = 'REFUND_PENDING';
+    return true;
+  }
+
+  async setStatus(paymentId: string, status: PaymentStatus) {
+    const row = this.rows.get(paymentId);
+    if (row) row.status = status;
   }
 }

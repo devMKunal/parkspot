@@ -44,3 +44,60 @@ describe('RazorpayGateway', () => {
     }
   });
 });
+
+describe('RazorpayGateway signatures', () => {
+  const gateway = new RazorpayGateway({
+    keyId: 'k',
+    keySecret: 'key_secret',
+    webhookSecret: 'wh_secret',
+  });
+
+  it('accepts the documented checkout signature and nothing else', async () => {
+    const { hmacSha256Hex } = await import('../src/modules/payments/hmac.js');
+    const signature = hmacSha256Hex('key_secret', 'order_1|pay_1');
+    expect(gateway.verifyCheckout({ orderId: 'order_1', paymentId: 'pay_1', signature })).toBe(
+      true,
+    );
+    expect(gateway.verifyCheckout({ orderId: 'order_2', paymentId: 'pay_1', signature })).toBe(
+      false,
+    );
+    expect(
+      gateway.verifyCheckout({ orderId: 'order_1', paymentId: 'pay_1', signature: 'zz' }),
+    ).toBe(false);
+    expect(gateway.verifyCheckout({ orderId: 'order_1', paymentId: 'pay_1', signature: '' })).toBe(
+      false,
+    );
+  });
+
+  it('parses only webhooks signed over the exact raw body', async () => {
+    const { hmacSha256Hex } = await import('../src/modules/payments/hmac.js');
+    const body = Buffer.from(
+      JSON.stringify({
+        event: 'payment.captured',
+        payload: {
+          payment: { entity: { id: 'pay_1', order_id: 'order_1', amount: 8000, currency: 'INR' } },
+        },
+      }),
+    );
+    const signature = hmacSha256Hex('wh_secret', body);
+
+    expect(gateway.parseWebhook(body, signature)).toEqual({
+      kind: 'payment.captured',
+      payment: { orderId: 'order_1', paymentId: 'pay_1', amountPaise: 8000, currency: 'INR' },
+    });
+    const reformatted = Buffer.from(JSON.stringify(JSON.parse(body.toString()), null, 2));
+    expect(gateway.parseWebhook(reformatted, signature)).toBeNull();
+    expect(
+      new RazorpayGateway({ keyId: 'k', keySecret: 's' }).parseWebhook(body, signature),
+    ).toBeNull();
+  });
+
+  it('refunds through the payments API', async () => {
+    const fetchFn = vi.fn(async () => jsonResponse(200, { id: 'rfnd_1' }));
+    const g = new RazorpayGateway({ keyId: 'k', keySecret: 's' }, fetchFn);
+    await g.refund('pay_1', 8000);
+    const [url, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://api.razorpay.com/v1/payments/pay_1/refund');
+    expect(JSON.parse(init.body as string)).toEqual({ amount: 8000, speed: 'normal' });
+  });
+});

@@ -2,11 +2,13 @@ import { createApp } from '../../src/app.js';
 import { AuthService } from '../../src/modules/auth/auth.service.js';
 import { TokenService } from '../../src/modules/auth/token.service.js';
 import { BookingService } from '../../src/modules/bookings/booking.service.js';
+import { PaymentService } from '../../src/modules/payments/payment.service.js';
 import {
   FakePasswordHasher,
   FakePaymentGateway,
   InMemoryBookingRepository,
   InMemoryLotRepository,
+  InMemoryPaymentRepository,
   InMemoryRefreshTokenRepository,
   InMemorySlotHoldRepository,
   InMemorySlotRepository,
@@ -40,7 +42,22 @@ export function buildTestApp(opts: TestAppOptions = {}) {
     lockMinutes: 10,
     now: opts.now,
   });
-  const app = createApp({ auth, tokens, users, lots, bookings, rateLimit: false });
+  const paymentRepo = new InMemoryPaymentRepository();
+  const paymentService = new PaymentService({
+    gateway: payments,
+    bookingService: bookings,
+    bookings: bookingRepo,
+    payments: paymentRepo,
+  });
+  const app = createApp({
+    auth,
+    tokens,
+    users,
+    lots,
+    bookings,
+    payments: paymentService,
+    rateLimit: false,
+  });
   return {
     app,
     users,
@@ -49,6 +66,7 @@ export function buildTestApp(opts: TestAppOptions = {}) {
     holds,
     bookingRepo,
     payments,
+    paymentRepo,
     refreshTokens,
     hasher,
     tokens,

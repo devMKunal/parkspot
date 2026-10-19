@@ -6,12 +6,15 @@ import { BookingModel } from '../../src/modules/bookings/booking.model.js';
 import { MongoBookingRepository } from '../../src/modules/bookings/booking.repository.js';
 import { SlotHoldModel } from '../../src/modules/lots/lot.model.js';
 import { MongoSlotHoldRepository } from '../../src/modules/lots/slot.repository.js';
+import { PaymentModel } from '../../src/modules/payments/payment.model.js';
+import { MongoPaymentRepository } from '../../src/modules/payments/payment.repository.js';
 
 /** Proves the slot lock against real MongoDB indexes. Run with `npm run test:int`. */
 describe('slot holds and bookings on MongoDB', () => {
   let mongod: MongoMemoryServer;
   const holds = new MongoSlotHoldRepository();
   const bookings = new MongoBookingRepository();
+  const paymentRepo = new MongoPaymentRepository();
   const lotId = new Types.ObjectId().toString();
   const slotId = new Types.ObjectId().toString();
   const now = new Date('2026-10-19T09:42:00Z');
@@ -27,7 +30,11 @@ describe('slot holds and bookings on MongoDB', () => {
   beforeAll(async () => {
     mongod = await MongoMemoryServer.create();
     await mongoose.connect(mongod.getUri());
-    await Promise.all([SlotHoldModel.syncIndexes(), BookingModel.syncIndexes()]);
+    await Promise.all([
+      SlotHoldModel.syncIndexes(),
+      BookingModel.syncIndexes(),
+      PaymentModel.syncIndexes(),
+    ]);
   });
 
   afterAll(async () => {
@@ -36,7 +43,11 @@ describe('slot holds and bookings on MongoDB', () => {
   });
 
   beforeEach(async () => {
-    await Promise.all([SlotHoldModel.deleteMany({}), BookingModel.deleteMany({})]);
+    await Promise.all([
+      SlotHoldModel.deleteMany({}),
+      BookingModel.deleteMany({}),
+      PaymentModel.deleteMany({}),
+    ]);
   });
 
   it('only one of many parallel claims on the same slot and window wins', async () => {
@@ -87,5 +98,34 @@ describe('slot holds and bookings on MongoDB', () => {
       bookings.transition(booking.id, ['PENDING'], 'EXPIRED'),
     ]);
     expect([a, b].filter(Boolean)).toHaveLength(1);
+  });
+
+  it('confirmBooking makes holds permanent and reports how many are left', async () => {
+    const id = newBooking();
+    await claim(id);
+    expect(await holds.confirmBooking(id)).toBe(8);
+    expect(await SlotHoldModel.countDocuments({ bookingId: id, expiresAt: null })).toBe(8);
+  });
+
+  it('records a payment once and lets exactly one caller claim its refund', async () => {
+    const input = {
+      provider: 'razorpay',
+      orderId: 'order_1',
+      paymentId: 'pay_1',
+      bookingId: null,
+      amountPaise: 8000,
+      source: 'client' as const,
+    };
+    await Promise.all([
+      paymentRepo.recordCaptured(input),
+      paymentRepo.recordCaptured({ ...input, source: 'webhook' }),
+    ]);
+    expect(await PaymentModel.countDocuments({ paymentId: 'pay_1' })).toBe(1);
+
+    const claims = await Promise.all([
+      paymentRepo.claimRefund('pay_1'),
+      paymentRepo.claimRefund('pay_1'),
+    ]);
+    expect(claims.filter(Boolean)).toHaveLength(1);
   });
 });

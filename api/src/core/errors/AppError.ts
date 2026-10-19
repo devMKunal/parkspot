@@ -12,6 +12,9 @@ export type ErrorCode =
   | 'BOOKING_NOT_CANCELLABLE'
   | 'RATE_LIMITED'
   | 'PAYMENT_PROVIDER_ERROR'
+  | 'PAYMENT_SIGNATURE_INVALID'
+  | 'PAYMENT_REFUNDED'
+  | 'WEBHOOK_SIGNATURE_INVALID'
   | 'PAYMENTS_UNAVAILABLE'
   | 'INTERNAL_ERROR';
 
@@ -45,6 +48,16 @@ export const Errors = {
     new AppError(409, 'BOOKING_NOT_CANCELLABLE', `A ${status} booking can't be cancelled`),
   paymentsUnavailable: () =>
     new AppError(503, 'PAYMENTS_UNAVAILABLE', 'Payments are not configured on this server'),
+  paymentSignatureInvalid: () =>
+    new AppError(400, 'PAYMENT_SIGNATURE_INVALID', 'Payment signature does not match'),
+  paymentRefunded: () =>
+    new AppError(
+      409,
+      'PAYMENT_REFUNDED',
+      'The slot is no longer available, so the payment is being refunded',
+    ),
+  webhookSignatureInvalid: () =>
+    new AppError(400, 'WEBHOOK_SIGNATURE_INVALID', 'Webhook signature does not match'),
   paymentProvider: () =>
     new AppError(502, 'PAYMENT_PROVIDER_ERROR', 'Could not create the payment, try again'),
 } as const;

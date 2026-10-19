@@ -12,6 +12,8 @@ const EnvSchema = z.object({
   // Optional so the API boots without them; booking then answers 503 PAYMENTS_UNAVAILABLE.
   RAZORPAY_KEY_ID: z.string().min(1).optional(),
   RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
+  // Dashboard → Webhooks → secret you chose. Without it POST /v1/webhooks/razorpay returns 503.
+  RAZORPAY_WEBHOOK_SECRET: z.string().min(1).optional(),
   CORS_ORIGINS: z
     .string()
     .default('')

@@ -1,6 +1,6 @@
 # ParkSpot: Bookings and slot locking (Milestone 4)
 
-Status: implemented in `api/src/modules/bookings`. Payment verification and the webhook (Milestone 5) build on this.
+Status: implemented in `api/src/modules/bookings`. Payment verification and the webhook are in [payments-api.md](payments-api.md).
 
 ## Flow
 

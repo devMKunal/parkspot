@@ -37,6 +37,22 @@ export interface CreatedBooking {
   payment: CheckoutPayload;
 }
 
+export interface PaidPayment {
+  orderId: string;
+  paymentId: string;
+  /** Known from webhooks; the checkout signature already binds the payment to our order. */
+  amountPaise?: number;
+}
+
+export type ConfirmOutcome =
+  | { kind: 'CONFIRMED'; booking: BookingRecord }
+  | { kind: 'ALREADY_CONFIRMED'; booking: BookingRecord }
+  /** The money arrived but no slot can honour it: the caller must refund. */
+  | { kind: 'REFUND'; booking: BookingRecord; reason: string }
+  | { kind: 'UNKNOWN_ORDER' };
+
+const PAID_STATUSES: BookingStatus[] = ['CONFIRMED', 'ACTIVE', 'COMPLETED'];
+
 /**
  * Booking use cases. The slot-locking design is in docs/bookings-api.md: a booking claims
  * 15-minute holds on one slot, and a unique index makes overlapping claims impossible.
@@ -131,6 +147,66 @@ export class BookingService {
     return cancelled;
   }
 
+  /**
+   * Applies a verified payment. Safe to call any number of times, from the app's verify call and
+   * the webhook alike: the PENDING/EXPIRED → CONFIRMED compare-and-set picks a single winner.
+   */
+  async confirmPaid(payment: PaidPayment): Promise<ConfirmOutcome> {
+    const { bookings, holds } = this.deps;
+    const booking = await bookings.findByOrderId(payment.orderId);
+    if (!booking) return { kind: 'UNKNOWN_ORDER' };
+
+    if (PAID_STATUSES.includes(booking.status)) {
+      return booking.paymentId === payment.paymentId
+        ? { kind: 'ALREADY_CONFIRMED', booking }
+        : { kind: 'REFUND', booking, reason: 'Order already paid by another payment' };
+    }
+    if (payment.amountPaise !== undefined && payment.amountPaise !== booking.amountPaise) {
+      return { kind: 'REFUND', booking, reason: 'Paid amount does not match the booking' };
+    }
+    if (booking.status === 'CANCELLED' || booking.status === 'FAILED') {
+      return { kind: 'REFUND', booking, reason: `Payment arrived for a ${booking.status} booking` };
+    }
+
+    const confirmed = await bookings.transition(booking.id, ['PENDING', 'EXPIRED'], 'CONFIRMED', {
+      paymentId: payment.paymentId,
+      lockExpiresAt: null,
+    });
+    // Lost the race to the other path (verify vs webhook): report what it decided.
+    if (!confirmed) return this.confirmPaid(payment);
+
+    const buckets = bucketsBetween(confirmed.start, confirmed.end);
+    if ((await holds.confirmBooking(confirmed.id)) === buckets.length) {
+      return { kind: 'CONFIRMED', booking: confirmed };
+    }
+
+    // The lock lapsed and part of the window was taken. Try the same slot, then any slot.
+    await holds.releaseBooking(confirmed.id);
+    const slot = await this.claimAnySlot(
+      confirmed.lotId,
+      confirmed.id,
+      confirmed.start,
+      confirmed.end,
+      null,
+      confirmed.slotId,
+    );
+    if (slot) {
+      if (slot.id !== confirmed.slotId)
+        await bookings.reassignSlot(confirmed.id, slot.id, slot.label);
+      return {
+        kind: 'CONFIRMED',
+        booking: { ...confirmed, slotId: slot.id, slotLabel: slot.label },
+      };
+    }
+
+    const failed = await bookings.transition(confirmed.id, ['CONFIRMED'], 'FAILED');
+    return {
+      kind: 'REFUND',
+      booking: failed ?? confirmed,
+      reason: 'Lock expired and the lot filled up before payment',
+    };
+  }
+
   private assertBookableWindow(start: Date, now: Date): void {
     const fieldError = (message: string) => Errors.validation({ start: [message] });
     if (!isOnBucketBoundary(start)) throw fieldError('Start must be on a 15-minute boundary');
@@ -140,19 +216,25 @@ export class BookingService {
     }
   }
 
-  /** Tries the slots that look free first; the unique index arbitrates any race. */
+  /**
+   * Tries the slots that look free first (the preferred one ahead of the rest);
+   * the unique index arbitrates any race. `expiresAt: null` claims permanently.
+   */
   private async claimAnySlot(
     lotId: string,
     bookingId: string,
     start: Date,
     end: Date,
-    expiresAt: Date,
+    expiresAt: Date | null,
+    preferredSlotId?: string,
   ) {
     const { slots, holds } = this.deps;
     const now = this.now();
     const buckets = bucketsBetween(start, end);
     const busy = await holds.busySlotIds(lotId, buckets, now);
-    const candidates = (await slots.listByLot(lotId)).filter((s) => !busy.has(s.id));
+    const candidates = (await slots.listByLot(lotId))
+      .filter((s) => !busy.has(s.id))
+      .sort((a, b) => Number(b.id === preferredSlotId) - Number(a.id === preferredSlotId));
 
     for (const slot of candidates) {
       const claimed = await holds.tryClaim(

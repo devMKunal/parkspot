@@ -23,6 +23,9 @@ export interface BookingRepository {
     patch?: Partial<Pick<BookingRecord, 'lockExpiresAt' | 'paymentId'>>,
   ): Promise<BookingRecord | null>;
   attachOrder(id: string, provider: string, orderId: string): Promise<void>;
+  findByOrderId(orderId: string): Promise<BookingRecord | null>;
+  /** Moves a paid booking to another slot when its original one was lost to a lapsed lock. */
+  reassignSlot(id: string, slotId: string, slotLabel: string): Promise<void>;
 }
 
 const toRecord = (doc: BookingDoc): BookingRecord => ({
@@ -86,5 +89,17 @@ export class MongoBookingRepository implements BookingRepository {
 
   async attachOrder(id: string, provider: string, orderId: string): Promise<void> {
     await BookingModel.updateOne({ _id: id }, { $set: { provider, orderId } });
+  }
+
+  async findByOrderId(orderId: string): Promise<BookingRecord | null> {
+    const doc = await BookingModel.findOne({ orderId });
+    return doc ? toRecord(doc) : null;
+  }
+
+  async reassignSlot(id: string, slotId: string, slotLabel: string): Promise<void> {
+    await BookingModel.updateOne(
+      { _id: id },
+      { $set: { slotId: new Types.ObjectId(slotId), slotLabel } },
+    );
   }
 }
