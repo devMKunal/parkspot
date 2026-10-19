@@ -1,15 +1,15 @@
 import { Errors } from '../../core/errors/AppError.js';
 import { logger } from '../../core/logger.js';
-import type { BookingRepository } from '../bookings/booking.repository.js';
 import type { BookingService, ConfirmOutcome } from '../bookings/booking.service.js';
 import type { BookingRecord } from '../bookings/booking.types.js';
+import type { ExtensionService } from '../bookings/extension.service.js';
 import type { CheckoutResult, PaymentGateway } from './payment.gateway.js';
 import type { PaymentRepository } from './payment.repository.js';
 
 export interface PaymentServiceDeps {
   gateway: PaymentGateway | null;
   bookingService: BookingService;
-  bookings: BookingRepository;
+  extensionService: ExtensionService;
   payments: PaymentRepository;
 }
 
@@ -25,8 +25,10 @@ export class PaymentService {
     const gateway = this.requireGateway();
     if (!gateway.verifyCheckout(result)) throw Errors.paymentSignatureInvalid();
 
-    const booking = await this.deps.bookings.findByOrderId(result.orderId);
-    if (!booking || booking.userId !== userId) throw Errors.notFound('Booking');
+    const owner =
+      (await this.deps.bookingService.ownerOfOrder(result.orderId)) ??
+      (await this.deps.extensionService.ownerOfOrder(result.orderId));
+    if (owner !== userId) throw Errors.notFound('Booking');
 
     const outcome = await this.apply(
       { orderId: result.orderId, paymentId: result.paymentId },
@@ -57,7 +59,10 @@ export class PaymentService {
     payment: { orderId: string; paymentId: string; amountPaise?: number },
     source: 'client' | 'webhook',
   ): Promise<ConfirmOutcome> {
-    const outcome = await this.deps.bookingService.confirmPaid(payment);
+    // An order belongs to either a booking or an extension of one.
+    let outcome = await this.deps.bookingService.confirmPaid(payment);
+    if (outcome.kind === 'UNKNOWN_ORDER')
+      outcome = await this.deps.extensionService.confirmPaid(payment);
     if (outcome.kind === 'UNKNOWN_ORDER') return outcome;
 
     await this.deps.payments.recordCaptured({
@@ -65,7 +70,7 @@ export class PaymentService {
       orderId: payment.orderId,
       paymentId: payment.paymentId,
       bookingId: outcome.booking.id,
-      amountPaise: payment.amountPaise ?? outcome.booking.amountPaise,
+      amountPaise: payment.amountPaise ?? outcome.orderPaise,
       source,
     });
 
@@ -79,7 +84,7 @@ export class PaymentService {
     if (!(await payments.claimRefund(paymentId))) return;
     logger.warn({ paymentId, bookingId: outcome.booking.id, reason: outcome.reason }, 'Refunding');
     try {
-      await this.requireGateway().refund(paymentId, outcome.booking.amountPaise);
+      await this.requireGateway().refund(paymentId, outcome.orderPaise);
       await payments.setStatus(paymentId, 'REFUNDED');
     } catch (err) {
       // Left visible as REFUND_FAILED for a manual refund from the dashboard.

@@ -8,6 +8,8 @@ import { MongoRefreshTokenRepository } from './modules/auth/refreshToken.reposit
 import { TokenService } from './modules/auth/token.service.js';
 import { MongoBookingRepository } from './modules/bookings/booking.repository.js';
 import { BookingService } from './modules/bookings/booking.service.js';
+import { MongoExtensionRepository } from './modules/bookings/extension.repository.js';
+import { ExtensionService } from './modules/bookings/extension.service.js';
 import { MongoLotRepository } from './modules/lots/lot.repository.js';
 import { MongoSlotHoldRepository, MongoSlotRepository } from './modules/lots/slot.repository.js';
 import { MongoPaymentRepository } from './modules/payments/payment.repository.js';
@@ -49,18 +51,29 @@ async function main(): Promise<void> {
   }
 
   const bookingRepo = new MongoBookingRepository();
+  const extensionRepo = new MongoExtensionRepository();
+  const holds = new MongoSlotHoldRepository();
   const bookings = new BookingService({
     bookings: bookingRepo,
+    extensions: extensionRepo,
     lots,
     slots: new MongoSlotRepository(),
-    holds: new MongoSlotHoldRepository(),
+    holds,
+    payments: gateway,
+    lockMinutes: env.BOOKING_LOCK_MINUTES,
+  });
+  const extensions = new ExtensionService({
+    bookings: bookingRepo,
+    extensions: extensionRepo,
+    lots,
+    holds,
     payments: gateway,
     lockMinutes: env.BOOKING_LOCK_MINUTES,
   });
   const paymentService = new PaymentService({
     gateway,
     bookingService: bookings,
-    bookings: bookingRepo,
+    extensionService: extensions,
     payments: new MongoPaymentRepository(),
   });
 
@@ -70,6 +83,7 @@ async function main(): Promise<void> {
     users,
     lots,
     bookings,
+    extensions,
     payments: paymentService,
     corsOrigins: env.CORS_ORIGINS,
   });

@@ -36,6 +36,8 @@ export interface SlotHoldRepository {
    * which is fewer than its buckets if a lapsed lock was taken over by someone else.
    */
   confirmBooking(bookingId: string): Promise<number>;
+  /** Frees the owners' holds from `from` onward (ending early). */
+  releaseFrom(ownerIds: string[], from: Date): Promise<void>;
 }
 
 export class MongoSlotRepository implements SlotRepository {
@@ -90,6 +92,13 @@ export class MongoSlotHoldRepository implements SlotHoldRepository {
   async releaseBooking(bookingId: string): Promise<void> {
     if (!mongoose.isValidObjectId(bookingId)) return;
     await SlotHoldModel.deleteMany({ bookingId: new Types.ObjectId(bookingId) });
+  }
+
+  async releaseFrom(ownerIds: string[], from: Date): Promise<void> {
+    await SlotHoldModel.deleteMany({
+      bookingId: { $in: ownerIds.map((id) => new Types.ObjectId(id)) },
+      bucketStart: { $gte: from },
+    });
   }
 
   async confirmBooking(bookingId: string): Promise<number> {
