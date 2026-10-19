@@ -2,13 +2,13 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { buildTestApp } from './support/testApp.js';
 
+const DAY_MS = 86_400_000;
+
 /**
  * Executable spec for AuthService (docs/auth-api.md, sections 1, 4 and 8).
- *
- * TODO(Dev): these are skipped until AuthService is implemented. Remove `.skip` and make
- * them pass; don't edit the assertions unless the contract in the design doc changes.
+ * Don't edit the assertions unless the contract in the design doc changes.
  */
-describe.skip('auth flow (spec for AuthService)', () => {
+describe('auth flow', () => {
   const creds = { name: 'Dev', email: 'dev@example.com', password: 'correct-horse' };
 
   const register = (app: ReturnType<typeof buildTestApp>['app']) =>
@@ -117,5 +117,53 @@ describe.skip('auth flow (spec for AuthService)', () => {
     await request(app).post('/v1/auth/logout').send({ refreshToken: token }).expect(204);
     await request(app).post('/v1/auth/logout').send({ refreshToken: token }).expect(204);
     await request(app).post('/v1/auth/refresh').send({ refreshToken: token }).expect(401);
+  });
+
+  it('an expired refresh token is REFRESH_INVALID, not reuse', async () => {
+    let now = new Date('2026-10-19T00:00:00Z');
+    const { app } = buildTestApp({ now: () => now });
+    const token = (await register(app).expect(201)).body.tokens.refreshToken;
+
+    now = new Date(now.getTime() + 31 * DAY_MS);
+    const res = await request(app)
+      .post('/v1/auth/refresh')
+      .send({ refreshToken: token })
+      .expect(401);
+    expect(res.body.error.code).toBe('REFRESH_INVALID');
+  });
+
+  it('refresh keeps the family and links the old token to its replacement', async () => {
+    const { app, refreshTokens } = buildTestApp();
+    const token = (await register(app).expect(201)).body.tokens.refreshToken;
+    await request(app).post('/v1/auth/refresh').send({ refreshToken: token }).expect(200);
+
+    const rows = [...refreshTokens.rows.values()];
+    expect(rows).toHaveLength(2);
+    expect(new Set(rows.map((r) => r.familyId)).size).toBe(1);
+    const [old, next] = rows;
+    expect(old?.revokedAt).not.toBeNull();
+    expect(old?.replacedById).toBe(next?.id);
+  });
+
+  it('each login starts its own family, so logging out one device keeps the other', async () => {
+    const { app } = buildTestApp();
+    await register(app).expect(201);
+    const login = () =>
+      request(app).post('/v1/auth/login').send({ email: creds.email, password: creds.password });
+    const phone = (await login().expect(200)).body.tokens.refreshToken;
+    const tablet = (await login().expect(200)).body.tokens.refreshToken;
+
+    await request(app).post('/v1/auth/logout').send({ refreshToken: phone }).expect(204);
+    await request(app).post('/v1/auth/refresh').send({ refreshToken: tablet }).expect(200);
+  });
+
+  it('stores the password hashed and the refresh token only as a hash', async () => {
+    const { app, users, refreshTokens } = buildTestApp();
+    const token = (await register(app).expect(201)).body.tokens.refreshToken;
+
+    const [user] = [...users.rows.values()];
+    expect(user?.passwordHash).not.toBe(creds.password);
+    const stored = [...refreshTokens.rows.values()].map((r) => r.tokenHash);
+    expect(stored).not.toContain(token);
   });
 });

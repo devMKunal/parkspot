@@ -4,7 +4,7 @@ Find and pre-book parking in busy areas, with Google Maps discovery and Razorpay
 
 | Folder | What | Status |
 |---|---|---|
-| [`api/`](api) | Node.js + TypeScript + Express + MongoDB REST API | Auth skeleton |
+| [`api/`](api) | Node.js + TypeScript + Express + MongoDB REST API | Auth done |
 | [`app/`](app) | Flutter client (BLoC, clean architecture) | Not started |
 | [`docs/`](docs) | Design docs | [Auth API](docs/auth-api.md) |
 
