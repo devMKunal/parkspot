@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import { errorHandler, notFoundHandler } from './core/errors/errorHandler.js';
 import { logger } from './core/logger.js';
+import type { BookingService } from './modules/bookings/booking.service.js';
+import { bookingsRouter } from './modules/bookings/bookings.routes.js';
 import type { LotRepository } from './modules/lots/lot.repository.js';
 import { lotsRouter } from './modules/lots/lots.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
@@ -17,6 +19,7 @@ export interface AppDeps {
   tokens: TokenService;
   users: UserRepository;
   lots: LotRepository;
+  bookings: BookingService;
   corsOrigins?: string[];
   /** Off in tests so suites can hammer /login. */
   rateLimit?: boolean;
@@ -38,6 +41,7 @@ export function createApp(deps: AppDeps): Express {
 
   app.use('/v1/auth', authRouter(deps.auth, { rateLimit: deps.rateLimit }));
   app.use('/v1/lots', lotsRouter({ lots: deps.lots }));
+  app.use('/v1', bookingsRouter({ bookings: deps.bookings, tokens: deps.tokens }));
   app.use('/v1', usersRouter({ users: deps.users, tokens: deps.tokens }));
 
   app.use(notFoundHandler);

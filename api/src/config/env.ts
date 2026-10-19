@@ -8,6 +8,10 @@ const EnvSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  BOOKING_LOCK_MINUTES: z.coerce.number().int().positive().default(10),
+  // Optional so the API boots without them; booking then answers 503 PAYMENTS_UNAVAILABLE.
+  RAZORPAY_KEY_ID: z.string().min(1).optional(),
+  RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
   CORS_ORIGINS: z
     .string()
     .default('')

@@ -36,18 +36,18 @@ Both are public: browsing needs no account and returns nothing user-specific.
 
 - `pricePerHour.amount` is in **paise** (4000 = ₹40.00). Format on the client; never do money maths in doubles.
 - `distanceMeters` is an integer, present only on `/nearby`.
-- `freeSlots` is a live count of `FREE` slots, computed per request (no cached counter that can drift).
+- `freeSlots` = slots with no live booking hold in the current 15-minute bucket, computed per request (no cached counter that can drift). See [bookings-api.md](bookings-api.md).
 
 ## Data model
 
 - `Lot { name, address, location: GeoJSON Point [lng, lat] (2dsphere), pricePerHourPaise, totalSlots, photos[], ownerId? }`
-- `Slot { lotId, label (unique per lot), status: FREE | LOCKED | BOOKED }`, indexed on `{ lotId, status }`
+- `Slot { lotId, label (unique per lot) }`; availability lives in `SlotHold` (see [bookings-api.md](bookings-api.md))
 
-Nearby uses one aggregation: `$geoNear` (index-backed, sorted by distance, capped by `maxDistance`) → `$limit` → `$lookup` counting FREE slots.
+Nearby uses one aggregation: `$geoNear` (index-backed, sorted by distance, capped by `maxDistance`) → `$limit` → `$lookup` counting live holds in the current bucket.
 
 ## Seed
 
-`npm run seed` resets lots and slots to 20 fictional, area-named lots across Pune (FC Road, Koregaon Park, Viman Nagar, Hinjewadi, …) with deterministic occupancy between 30% and 95%. It refuses to run with `NODE_ENV=production`.
+`npm run seed` resets lots and slots to 20 fictional, area-named lots across Pune (FC Road, Koregaon Park, Viman Nagar, Hinjewadi, …) with deterministic occupancy between 30% and 95%, modelled as walk-in holds for the next 3 hours (re-run it before a demo). It refuses to run with `NODE_ENV=production`.
 
 ## Stretch
 

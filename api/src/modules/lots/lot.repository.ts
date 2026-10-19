@@ -1,5 +1,6 @@
 import mongoose, { Types, type PipelineStage } from 'mongoose';
-import { LotModel, SlotModel } from './lot.model.js';
+import { floorToBucket } from '../../core/time.js';
+import { LotModel, SlotHoldModel } from './lot.model.js';
 import type { GeoPoint, LotRecord, NearbyLotRecord } from './lot.types.js';
 
 export interface NearbyQuery {
@@ -9,7 +10,7 @@ export interface NearbyQuery {
 }
 
 export interface LotRepository {
-  /** Lots within the radius, nearest first, with their current free-slot count. */
+  /** Lots within the radius, nearest first, with their free-slot count right now. */
   findNearby(query: NearbyQuery): Promise<NearbyLotRecord[]>;
   findById(id: string): Promise<LotRecord | null>;
 }
@@ -26,21 +27,41 @@ interface LotAggregateRow {
   distanceMeters?: number;
 }
 
-/** Joins the count of FREE slots onto each lot in the same round-trip. */
-const freeSlotsStages: PipelineStage[] = [
+/** A hold counts while it is confirmed (no expiresAt) or its lock hasn't run out yet. */
+export const liveHoldFilter = (now: Date) => ({
+  $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }],
+});
+
+/**
+ * Adds `freeSlots`: total slots minus slots holding the current 15-minute bucket,
+ * computed in the same round-trip.
+ */
+const freeSlotsStages = (now: Date): PipelineStage[] => [
   {
     $lookup: {
-      from: SlotModel.collection.name,
+      from: SlotHoldModel.collection.name,
       let: { lotId: '$_id' },
       pipeline: [
-        { $match: { $expr: { $eq: ['$lotId', '$$lotId'] }, status: 'FREE' } },
+        {
+          $match: {
+            $expr: { $eq: ['$lotId', '$$lotId'] },
+            bucketStart: floorToBucket(now),
+            ...liveHoldFilter(now),
+          },
+        },
         { $count: 'n' },
       ],
-      as: 'free',
+      as: 'busy',
     },
   },
-  { $set: { freeSlots: { $ifNull: [{ $first: '$free.n' }, 0] } } },
-  { $unset: 'free' },
+  {
+    $set: {
+      freeSlots: {
+        $max: [0, { $subtract: ['$totalSlots', { $ifNull: [{ $first: '$busy.n' }, 0] }] }],
+      },
+    },
+  },
+  { $unset: 'busy' },
 ];
 
 const toRecord = (row: LotAggregateRow): LotRecord => ({
@@ -55,6 +76,8 @@ const toRecord = (row: LotAggregateRow): LotRecord => ({
 });
 
 export class MongoLotRepository implements LotRepository {
+  constructor(private readonly now: () => Date = () => new Date()) {}
+
   async findNearby({ center, radiusMeters, limit }: NearbyQuery): Promise<NearbyLotRecord[]> {
     const rows = await LotModel.aggregate<LotAggregateRow>([
       {
@@ -67,7 +90,7 @@ export class MongoLotRepository implements LotRepository {
         },
       },
       { $limit: limit },
-      ...freeSlotsStages,
+      ...freeSlotsStages(this.now()),
     ]);
     return rows.map((row) => ({ ...toRecord(row), distanceMeters: row.distanceMeters ?? 0 }));
   }
@@ -76,7 +99,7 @@ export class MongoLotRepository implements LotRepository {
     if (!mongoose.isValidObjectId(id)) return null;
     const [row] = await LotModel.aggregate<LotAggregateRow>([
       { $match: { _id: new Types.ObjectId(id) } },
-      ...freeSlotsStages,
+      ...freeSlotsStages(this.now()),
     ]);
     return row ? toRecord(row) : null;
   }

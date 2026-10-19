@@ -8,7 +8,11 @@ export type ErrorCode =
   | 'TOKEN_EXPIRED'
   | 'TOKEN_INVALID'
   | 'NOT_FOUND'
+  | 'LOT_FULL'
+  | 'BOOKING_NOT_CANCELLABLE'
   | 'RATE_LIMITED'
+  | 'PAYMENT_PROVIDER_ERROR'
+  | 'PAYMENTS_UNAVAILABLE'
   | 'INTERNAL_ERROR';
 
 /** An error that is safe to show to the client. Anything else becomes a 500. */
@@ -36,4 +40,11 @@ export const Errors = {
   tokenExpired: () => new AppError(401, 'TOKEN_EXPIRED', 'Access token has expired'),
   tokenInvalid: () => new AppError(401, 'TOKEN_INVALID', 'Access token is missing or invalid'),
   notFound: (what = 'Resource') => new AppError(404, 'NOT_FOUND', `${what} not found`),
+  lotFull: () => new AppError(409, 'LOT_FULL', 'No free slot in this lot for that time'),
+  bookingNotCancellable: (status: string) =>
+    new AppError(409, 'BOOKING_NOT_CANCELLABLE', `A ${status} booking can't be cancelled`),
+  paymentsUnavailable: () =>
+    new AppError(503, 'PAYMENTS_UNAVAILABLE', 'Payments are not configured on this server'),
+  paymentProvider: () =>
+    new AppError(502, 'PAYMENT_PROVIDER_ERROR', 'Could not create the payment, try again'),
 } as const;
