@@ -1,6 +1,12 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
+// `KEY=` in .env arrives as '' (copying .env.example does that), so blank counts as unset.
+const optionalString = z.preprocess(
+  (value) => (value === '' ? undefined : value),
+  z.string().min(1).optional(),
+);
+
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
@@ -10,10 +16,10 @@ const EnvSchema = z.object({
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
   BOOKING_LOCK_MINUTES: z.coerce.number().int().positive().default(10),
   // Optional so the API boots without them; booking then answers 503 PAYMENTS_UNAVAILABLE.
-  RAZORPAY_KEY_ID: z.string().min(1).optional(),
-  RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
+  RAZORPAY_KEY_ID: optionalString,
+  RAZORPAY_KEY_SECRET: optionalString,
   // Dashboard → Webhooks → secret you chose. Without it POST /v1/webhooks/razorpay returns 503.
-  RAZORPAY_WEBHOOK_SECRET: z.string().min(1).optional(),
+  RAZORPAY_WEBHOOK_SECRET: optionalString,
   CORS_ORIGINS: z
     .string()
     .default('')
