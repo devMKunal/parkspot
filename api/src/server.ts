@@ -6,7 +6,13 @@ import { AuthService } from './modules/auth/auth.service.js';
 import { Argon2PasswordHasher } from './modules/auth/password.hasher.js';
 import { MongoRefreshTokenRepository } from './modules/auth/refreshToken.repository.js';
 import { TokenService } from './modules/auth/token.service.js';
+import { MongoBookingRepository } from './modules/bookings/booking.repository.js';
+import { BookingService } from './modules/bookings/booking.service.js';
 import { MongoLotRepository } from './modules/lots/lot.repository.js';
+import { MongoSlotHoldRepository, MongoSlotRepository } from './modules/lots/slot.repository.js';
+import { MongoPaymentRepository } from './modules/payments/payment.repository.js';
+import { PaymentService } from './modules/payments/payment.service.js';
+import { RazorpayGateway } from './modules/payments/razorpay.gateway.js';
 import { MongoUserRepository } from './modules/users/user.repository.js';
 
 /** Composition root: the only file that knows about concrete implementations. */
@@ -27,11 +33,44 @@ async function main(): Promise<void> {
     hasher: new Argon2PasswordHasher(),
   });
 
+  const lots = new MongoLotRepository();
+  const gateway =
+    env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET
+      ? new RazorpayGateway({
+          keyId: env.RAZORPAY_KEY_ID,
+          keySecret: env.RAZORPAY_KEY_SECRET,
+          webhookSecret: env.RAZORPAY_WEBHOOK_SECRET,
+        })
+      : null;
+  if (!gateway) logger.warn('Razorpay keys not set: POST /v1/bookings will return 503');
+
+  if (gateway && !env.RAZORPAY_WEBHOOK_SECRET) {
+    logger.warn('RAZORPAY_WEBHOOK_SECRET not set: webhooks will be rejected');
+  }
+
+  const bookingRepo = new MongoBookingRepository();
+  const bookings = new BookingService({
+    bookings: bookingRepo,
+    lots,
+    slots: new MongoSlotRepository(),
+    holds: new MongoSlotHoldRepository(),
+    payments: gateway,
+    lockMinutes: env.BOOKING_LOCK_MINUTES,
+  });
+  const paymentService = new PaymentService({
+    gateway,
+    bookingService: bookings,
+    bookings: bookingRepo,
+    payments: new MongoPaymentRepository(),
+  });
+
   const app = createApp({
     auth,
     tokens,
     users,
-    lots: new MongoLotRepository(),
+    lots,
+    bookings,
+    payments: paymentService,
     corsOrigins: env.CORS_ORIGINS,
   });
   const server = app.listen(env.PORT, () => logger.info(`API listening on :${env.PORT}`));

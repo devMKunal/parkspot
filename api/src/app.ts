@@ -4,6 +4,10 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import { errorHandler, notFoundHandler } from './core/errors/errorHandler.js';
 import { logger } from './core/logger.js';
+import type { BookingService } from './modules/bookings/booking.service.js';
+import { bookingsRouter } from './modules/bookings/bookings.routes.js';
+import type { PaymentService } from './modules/payments/payment.service.js';
+import { paymentsRouter, webhooksRouter } from './modules/payments/payments.routes.js';
 import type { LotRepository } from './modules/lots/lot.repository.js';
 import { lotsRouter } from './modules/lots/lots.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
@@ -17,6 +21,8 @@ export interface AppDeps {
   tokens: TokenService;
   users: UserRepository;
   lots: LotRepository;
+  bookings: BookingService;
+  payments: PaymentService;
   corsOrigins?: string[];
   /** Off in tests so suites can hammer /login. */
   rateLimit?: boolean;
@@ -29,6 +35,8 @@ export function createApp(deps: AppDeps): Express {
   app.disable('x-powered-by');
   app.use(helmet());
   app.use(cors({ origin: deps.corsOrigins ?? [] }));
+  // Webhooks first: they need the raw body for signature checks, before JSON parsing.
+  app.use('/v1/webhooks', webhooksRouter({ payments: deps.payments }));
   app.use(express.json({ limit: '100kb' }));
   app.use(pinoHttp({ logger }));
 
@@ -38,6 +46,8 @@ export function createApp(deps: AppDeps): Express {
 
   app.use('/v1/auth', authRouter(deps.auth, { rateLimit: deps.rateLimit }));
   app.use('/v1/lots', lotsRouter({ lots: deps.lots }));
+  app.use('/v1', bookingsRouter({ bookings: deps.bookings, tokens: deps.tokens }));
+  app.use('/v1', paymentsRouter({ payments: deps.payments, tokens: deps.tokens }));
   app.use('/v1', usersRouter({ users: deps.users, tokens: deps.tokens }));
 
   app.use(notFoundHandler);
