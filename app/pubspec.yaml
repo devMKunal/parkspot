@@ -1,0 +1,40 @@
+name: parkspot
+description: "ParkSpot: find and pre-book parking in Pune."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  intl: ^0.20.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^11.0.0
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    - family: BricolageGrotesque
+      fonts:
+        - asset: assets/fonts/BricolageGrotesque-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/BricolageGrotesque-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/BricolageGrotesque-ExtraBold.ttf
+          weight: 800
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
