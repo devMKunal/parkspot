@@ -13,3 +13,15 @@ export const validateBody =
     req.body = result.data;
     next();
   };
+
+/**
+ * Parses any input (e.g. `req.query`, which Express 5 makes read-only) or throws a 422.
+ * Use inside handlers where replacing the request property isn't possible.
+ */
+export function parseOrThrow<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
+  const result = schema.safeParse(input);
+  if (!result.success) {
+    throw Errors.validation(z.flattenError(result.error).fieldErrors);
+  }
+  return result.data;
+}

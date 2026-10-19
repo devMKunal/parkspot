@@ -6,6 +6,7 @@ import { AuthService } from './modules/auth/auth.service.js';
 import { Argon2PasswordHasher } from './modules/auth/password.hasher.js';
 import { MongoRefreshTokenRepository } from './modules/auth/refreshToken.repository.js';
 import { TokenService } from './modules/auth/token.service.js';
+import { MongoLotRepository } from './modules/lots/lot.repository.js';
 import { MongoUserRepository } from './modules/users/user.repository.js';
 
 /** Composition root: the only file that knows about concrete implementations. */
@@ -26,7 +27,13 @@ async function main(): Promise<void> {
     hasher: new Argon2PasswordHasher(),
   });
 
-  const app = createApp({ auth, tokens, users, corsOrigins: env.CORS_ORIGINS });
+  const app = createApp({
+    auth,
+    tokens,
+    users,
+    lots: new MongoLotRepository(),
+    corsOrigins: env.CORS_ORIGINS,
+  });
   const server = app.listen(env.PORT, () => logger.info(`API listening on :${env.PORT}`));
 
   const shutdown = (signal: string) => {
