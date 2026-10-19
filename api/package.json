@@ -12,7 +12,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run --exclude \"tests/integration/**\"",
     "test:watch": "vitest",
-    "test:int": "vitest run tests/integration"
+    "test:int": "vitest run tests/integration",
+    "seed": "tsx scripts/seed.ts"
   },
   "license": "UNLICENSED",
   "dependencies": {

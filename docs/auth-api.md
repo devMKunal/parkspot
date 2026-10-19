@@ -1,6 +1,6 @@
 # ParkSpot: Auth API design (Milestone 0)
 
-Status: design for Dev's review. Skeleton lives in `api/`; `AuthService` is left for Dev. Backend: Node.js + TypeScript + Express + MongoDB (Mongoose), zod, JWT.
+Status: implemented in `api/` (Claude owns the backend; Dev owns the Flutter app). Backend: Node.js + TypeScript + Express + MongoDB (Mongoose), zod, JWT.
 
 ## 0. Decisions for Dev
 

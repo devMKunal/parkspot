@@ -11,6 +11,8 @@ import {
   type UserRepository,
 } from '../../src/modules/users/user.repository.js';
 import type { UserRecord } from '../../src/modules/users/user.types.js';
+import type { LotRepository, NearbyQuery } from '../../src/modules/lots/lot.repository.js';
+import type { LotRecord, NearbyLotRecord } from '../../src/modules/lots/lot.types.js';
 
 /** In-memory repositories with the same contracts as the Mongo ones, for fast unit tests. */
 export class InMemoryUserRepository implements UserRepository {
@@ -103,3 +105,36 @@ export const TEST_TOKEN_CONFIG = {
   accessTtlSeconds: 900,
   refreshTtlDays: 30,
 };
+
+/** Haversine distance, good enough to stand in for MongoDB's spherical $geoNear in tests. */
+export function distanceMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6_371_008.8;
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+export class InMemoryLotRepository implements LotRepository {
+  readonly rows = new Map<string, LotRecord>();
+
+  add(lot: Omit<LotRecord, 'id'> & { id?: string }): LotRecord {
+    const record = { ...lot, id: lot.id ?? randomUUID() };
+    this.rows.set(record.id, record);
+    return record;
+  }
+
+  async findNearby({ center, radiusMeters, limit }: NearbyQuery): Promise<NearbyLotRecord[]> {
+    return [...this.rows.values()]
+      .map((lot) => ({ ...lot, distanceMeters: distanceMeters(center, lot.location) }))
+      .filter((lot) => lot.distanceMeters <= radiusMeters)
+      .sort((a, b) => a.distanceMeters - b.distanceMeters)
+      .slice(0, limit);
+  }
+
+  async findById(id: string) {
+    return this.rows.get(id) ?? null;
+  }
+}

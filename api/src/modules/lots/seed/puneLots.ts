@@ -1,0 +1,175 @@
+/**
+ * Demo data: 20 fictional lots in busy Pune areas. Names are area-based on purpose,
+ * so none of them claims to be a real operator. Coordinates are approximate.
+ */
+export interface SeedLot {
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  pricePerHourPaise: number;
+  totalSlots: number;
+}
+
+export const PUNE_LOTS: readonly SeedLot[] = [
+  {
+    name: 'FC Road Multilevel Parking',
+    address: 'Fergusson College Rd, Shivajinagar',
+    lat: 18.5246,
+    lng: 73.8411,
+    pricePerHourPaise: 4000,
+    totalSlots: 120,
+  },
+  {
+    name: 'JM Road Parking Plaza',
+    address: 'Jangli Maharaj Rd, Deccan',
+    lat: 18.5196,
+    lng: 73.8474,
+    pricePerHourPaise: 3500,
+    totalSlots: 80,
+  },
+  {
+    name: 'Deccan Gymkhana Lot',
+    address: 'Bhandarkar Rd, Deccan Gymkhana',
+    lat: 18.5167,
+    lng: 73.8414,
+    pricePerHourPaise: 3000,
+    totalSlots: 40,
+  },
+  {
+    name: 'Koregaon Park Lane 5 Parking',
+    address: 'Lane 5, Koregaon Park',
+    lat: 18.5362,
+    lng: 73.894,
+    pricePerHourPaise: 5000,
+    totalSlots: 60,
+  },
+  {
+    name: 'North Main Road Parking',
+    address: 'North Main Rd, Koregaon Park',
+    lat: 18.5404,
+    lng: 73.889,
+    pricePerHourPaise: 5000,
+    totalSlots: 50,
+  },
+  {
+    name: 'Kalyani Nagar Central Parking',
+    address: 'Central Ave, Kalyani Nagar',
+    lat: 18.5463,
+    lng: 73.9033,
+    pricePerHourPaise: 4000,
+    totalSlots: 70,
+  },
+  {
+    name: 'Viman Nagar Square Parking',
+    address: 'Datta Mandir Chowk, Viman Nagar',
+    lat: 18.5679,
+    lng: 73.9143,
+    pricePerHourPaise: 3500,
+    totalSlots: 90,
+  },
+  {
+    name: 'Nagar Road Mall Parking',
+    address: 'Nagar Rd, Viman Nagar',
+    lat: 18.562,
+    lng: 73.9167,
+    pricePerHourPaise: 6000,
+    totalSlots: 120,
+  },
+  {
+    name: 'MG Road Camp Parking',
+    address: 'Mahatma Gandhi Rd, Camp',
+    lat: 18.5167,
+    lng: 73.8786,
+    pricePerHourPaise: 4500,
+    totalSlots: 60,
+  },
+  {
+    name: 'Shivajinagar Bus Stand Lot',
+    address: 'Wakdewadi, Shivajinagar',
+    lat: 18.5308,
+    lng: 73.8475,
+    pricePerHourPaise: 2000,
+    totalSlots: 100,
+  },
+  {
+    name: 'Pune Station Parking',
+    address: 'Agarkar Nagar, Pune Station',
+    lat: 18.5286,
+    lng: 73.8743,
+    pricePerHourPaise: 2500,
+    totalSlots: 110,
+  },
+  {
+    name: 'Swargate Junction Parking',
+    address: 'Shankarshet Rd, Swargate',
+    lat: 18.5018,
+    lng: 73.8636,
+    pricePerHourPaise: 2000,
+    totalSlots: 80,
+  },
+  {
+    name: 'Kothrud Karve Road Parking',
+    address: 'Karve Rd, Kothrud',
+    lat: 18.5074,
+    lng: 73.8077,
+    pricePerHourPaise: 3000,
+    totalSlots: 50,
+  },
+  {
+    name: 'Aundh ITI Road Parking',
+    address: 'ITI Rd, Aundh',
+    lat: 18.559,
+    lng: 73.8076,
+    pricePerHourPaise: 3500,
+    totalSlots: 45,
+  },
+  {
+    name: 'Baner High Street Parking',
+    address: 'Baner Rd, Baner',
+    lat: 18.559,
+    lng: 73.7868,
+    pricePerHourPaise: 4000,
+    totalSlots: 75,
+  },
+  {
+    name: 'Wakad Bridge Parking',
+    address: 'Mumbai-Bangalore Hwy, Wakad',
+    lat: 18.5986,
+    lng: 73.76,
+    pricePerHourPaise: 2500,
+    totalSlots: 60,
+  },
+  {
+    name: 'Hinjewadi Phase 1 Parking',
+    address: 'Rajiv Gandhi Infotech Park, Hinjewadi',
+    lat: 18.5913,
+    lng: 73.7389,
+    pricePerHourPaise: 3000,
+    totalSlots: 150,
+  },
+  {
+    name: 'Hadapsar Gadital Parking',
+    address: 'Solapur Rd, Hadapsar',
+    lat: 18.5089,
+    lng: 73.926,
+    pricePerHourPaise: 2500,
+    totalSlots: 70,
+  },
+  {
+    name: 'Magarpatta Gate Parking',
+    address: 'Magarpatta Rd, Hadapsar',
+    lat: 18.5157,
+    lng: 73.9272,
+    pricePerHourPaise: 3500,
+    totalSlots: 90,
+  },
+  {
+    name: 'Kharadi EON Road Parking',
+    address: 'Kharadi Bypass, Kharadi',
+    lat: 18.5515,
+    lng: 73.9348,
+    pricePerHourPaise: 4000,
+    totalSlots: 100,
+  },
+];
