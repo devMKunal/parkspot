@@ -20,7 +20,7 @@ class _ParkSpotAppState extends State<ParkSpotApp> {
 
   late final GoRouter _router = createAppRouter(
     authStatus: _session.status,
-    onboardingSeen: _session.onboardingSeen,
+    onboarding: _session.onboarding,
     includeDevRoutes: widget.config.isDev,
   );
 

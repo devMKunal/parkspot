@@ -22,10 +22,11 @@ change state, and the redirect re-runs because the router listens to it
 
 ## Plugging in AuthBloc
 
-The router only needs a `ValueListenable<AuthStatus>` and a
-`ValueListenable<bool>` for "onboarding seen". Today both come from
-`DevSession` (`lib/dev/dev_session.dart`), a stub that fakes the
-refresh-token check. When AuthBloc exists:
+The router only needs a `ValueListenable<AuthStatus>` and an
+`OnboardingStatus` (`lib/features/onboarding/domain/onboarding_status.dart`).
+Today both come from `DevSession` (`lib/dev/dev_session.dart`), a stub that
+fakes the refresh-token check and keeps "onboarding seen" in memory. When
+AuthBloc exists:
 
 1. On start, AuthBloc reads the refresh token from secure storage
    (`StorageKeys.refreshToken`). None: emit `unauthenticated`. Found: call
@@ -41,15 +42,18 @@ refresh-token check. When AuthBloc exists:
    );
    final router = createAppRouter(
      authStatus: authStatus,
-     onboardingSeen: onboardingSeen, // ValueNotifier fed by shared_preferences
+     onboarding: onboardingStatus, // your shared_preferences-backed one
      includeDevRoutes: config.isDev,
    );
    ```
 
    Create both once (in a `State` or your DI graph), never in `build`, and
    dispose them with the app.
-3. Delete `DevSession`, `DevSessionScope` and the stub actions on
-   `RoutePlaceholderPage`.
+3. Implement `OnboardingStatus` over shared_preferences
+   (`StorageKeys.onboardingSeen`), loaded before the router starts so the
+   splash knows where to go. The onboarding page already calls `markSeen`.
+4. Delete `DevSession`, `DevSessionScope`, `InMemoryOnboardingStatus` and
+   the stub actions on `RoutePlaceholderPage`.
 
 ## Placeholders
 

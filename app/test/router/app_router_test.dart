@@ -23,7 +23,7 @@ void main() {
     );
     router = createAppRouter(
       authStatus: session.status,
-      onboardingSeen: session.onboardingSeen,
+      onboarding: session.onboarding,
       initialLocation: initialLocation,
     );
     addTearDown(() {
@@ -52,10 +52,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(location(), '/onboarding');
 
-    await tester.tap(find.text('Get started'));
+    await tester.tap(find.text('Skip'));
     await tester.pumpAndSettle();
     expect(location(), '/signup');
-    expect(session.onboardingSeen.value, isTrue);
+    expect(session.onboarding.seen.value, isTrue);
 
     await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();

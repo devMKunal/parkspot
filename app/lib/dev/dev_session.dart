@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:parkspot/features/onboarding/domain/onboarding_status.dart';
 import 'package:parkspot/router/auth_status.dart';
 
 /// Stand-in for AuthBloc and the onboarding flag until they exist, so the
-/// router and splash can be exercised end to end.
+/// router and screens can be exercised end to end.
 ///
 /// It fakes the cold-start check: [status] starts `unknown` and settles to
 /// `restoresTo` after `restoreDelay`, like a refresh-token lookup would.
@@ -14,12 +16,12 @@ class DevSession {
     Duration restoreDelay = const Duration(milliseconds: 1200),
     AuthStatus restoresTo = AuthStatus.unauthenticated,
     bool onboardingSeen = false,
-  }) : onboardingSeen = ValueNotifier(onboardingSeen) {
+  }) : onboarding = InMemoryOnboardingStatus(seen: onboardingSeen) {
     _restore = Timer(restoreDelay, () => status.value = restoresTo);
   }
 
   final ValueNotifier<AuthStatus> status = ValueNotifier(AuthStatus.unknown);
-  final ValueNotifier<bool> onboardingSeen;
+  final InMemoryOnboardingStatus onboarding;
   late final Timer _restore;
 
   void signIn() => _settle(AuthStatus.authenticated);
@@ -31,13 +33,27 @@ class DevSession {
     status.value = next;
   }
 
-  void completeOnboarding() => onboardingSeen.value = true;
-
   void dispose() {
     _restore.cancel();
     status.dispose();
-    onboardingSeen.dispose();
+    onboarding.dispose();
   }
+}
+
+/// [OnboardingStatus] that forgets on restart.
+// TODO(dev): replace with one backed by shared_preferences.
+class InMemoryOnboardingStatus implements OnboardingStatus {
+  InMemoryOnboardingStatus({bool seen = false}) : _seen = ValueNotifier(seen);
+
+  final ValueNotifier<bool> _seen;
+
+  @override
+  ValueListenable<bool> get seen => _seen;
+
+  @override
+  Future<void> markSeen() async => _seen.value = true;
+
+  void dispose() => _seen.dispose();
 }
 
 /// Puts the [DevSession] where placeholder screens can reach it.

@@ -7,7 +7,7 @@ import 'package:parkspot/core/widgets/chunky_button.dart';
 import 'package:parkspot/dev/dev_session.dart';
 import 'package:parkspot/router/app_routes.dart';
 
-enum StubAuthAction { signIn, signOut, completeOnboarding }
+enum StubAuthAction { signIn, signOut }
 
 /// A button on a placeholder: go somewhere, or poke the [DevSession].
 class PlaceholderAction {
@@ -47,8 +47,6 @@ class RoutePlaceholderPage extends StatelessWidget {
         session?.signIn();
       case StubAuthAction.signOut:
         session?.signOut();
-      case StubAuthAction.completeOnboarding:
-        session?.completeOnboarding();
       case null:
         break;
     }

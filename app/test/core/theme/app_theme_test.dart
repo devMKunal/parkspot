@@ -25,6 +25,21 @@ void main() {
     expect(dark.colorScheme.primary, AppColors.primaryDark);
   });
 
+  test('every text style is painted onSurface', () {
+    for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+      final text = theme.textTheme;
+      for (final style in [
+        text.displaySmall,
+        text.headlineLarge,
+        text.titleMedium,
+        text.bodyLarge,
+        text.labelLarge,
+      ]) {
+        expect(style?.color, theme.colorScheme.onSurface);
+      }
+    }
+  });
+
   test('semantic colours lerp field by field', () {
     final mid = AppSemanticColors.light.lerp(AppSemanticColors.dark, 0.5);
     expect(
