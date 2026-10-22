@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:parkspot/dev/component_gallery_page.dart';
 import 'package:parkspot/dev/route_placeholder_page.dart';
+import 'package:parkspot/features/onboarding/domain/onboarding_status.dart';
+import 'package:parkspot/features/onboarding/presentation/onboarding_page.dart';
 import 'package:parkspot/features/splash/presentation/splash_page.dart';
 import 'package:parkspot/router/app_redirect.dart';
 import 'package:parkspot/router/app_routes.dart';
@@ -10,21 +14,21 @@ import 'package:parkspot/router/auth_status.dart';
 /// Builds the app's router. Create it once (in a State or the DI graph),
 /// never inside a build method, or navigation state resets on rebuild.
 ///
-/// The router only listens: [authStatus] and [onboardingSeen] change
-/// elsewhere (AuthBloc, the onboarding screen) and the redirect re-runs.
+/// The router only listens: [authStatus] and [onboarding] change elsewhere
+/// (AuthBloc, the onboarding screen) and the redirect re-runs.
 GoRouter createAppRouter({
   required ValueListenable<AuthStatus> authStatus,
-  required ValueListenable<bool> onboardingSeen,
+  required OnboardingStatus onboarding,
   bool includeDevRoutes = false,
   String initialLocation = AppRoutes.splash,
 }) {
   return GoRouter(
     initialLocation: initialLocation,
-    refreshListenable: Listenable.merge([authStatus, onboardingSeen]),
+    refreshListenable: Listenable.merge([authStatus, onboarding.seen]),
     redirect: (context, state) => appRedirect(
       uri: state.uri,
       auth: authStatus.value,
-      onboardingSeen: onboardingSeen.value,
+      onboardingSeen: onboarding.seen.value,
     ),
     errorBuilder: (context, state) => const RoutePlaceholderPage(
       title: 'Nothing here',
@@ -36,25 +40,12 @@ GoRouter createAppRouter({
         path: AppRoutes.splash,
         builder: (context, state) => const SplashPage(),
       ),
-      // TODO(dev): replace each RoutePlaceholderPage with the real screen.
       GoRoute(
         path: AppRoutes.onboarding,
-        builder: (context, state) => const RoutePlaceholderPage(
-          title: 'Onboarding',
-          actions: [
-            PlaceholderAction.stub(
-              'Get started',
-              StubAuthAction.completeOnboarding,
-              then: AppRoutes.signup,
-            ),
-            PlaceholderAction.stub(
-              'I already have an account',
-              StubAuthAction.completeOnboarding,
-              then: AppRoutes.login,
-            ),
-          ],
-        ),
+        builder: (context, state) =>
+            OnboardingPage(onFinished: () => unawaited(onboarding.markSeen())),
       ),
+      // TODO(dev): replace each RoutePlaceholderPage with the real screen.
       GoRoute(
         path: AppRoutes.signup,
         builder: (context, state) => const RoutePlaceholderPage(

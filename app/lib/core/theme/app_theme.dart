@@ -46,7 +46,12 @@ abstract final class AppTheme {
       );
 
   static ThemeData _build(ColorScheme scheme, AppSemanticColors semantic) {
-    final text = AppTypography.textTheme();
+    // The Typography styles carry no colour and don't inherit one, so
+    // without this every unstyled Text in the theme would paint white.
+    final text = AppTypography.textTheme().apply(
+      bodyColor: scheme.onSurface,
+      displayColor: scheme.onSurface,
+    );
     final roundedMd = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(AppRadius.md),
     );
