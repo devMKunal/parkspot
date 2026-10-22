@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches AppSemanticColors.celebration, so the native launch screen
+         hands over to the Flutter splash without a flash. -->
+    <color name="splash_background">#4F46E5</color>
+</resources>
