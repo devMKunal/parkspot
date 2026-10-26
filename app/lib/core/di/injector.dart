@@ -8,10 +8,14 @@ import 'package:parkspot/core/location/location_service.dart';
 import 'package:parkspot/core/network/api_client.dart';
 import 'package:parkspot/core/network/auth_interceptor.dart';
 import 'package:parkspot/core/network/session_refresher.dart';
+import 'package:parkspot/core/payments/payment_checkout.dart';
 import 'package:parkspot/core/storage/token_store.dart';
 import 'package:parkspot/features/auth/data/auth_repository_impl.dart';
 import 'package:parkspot/features/auth/domain/auth_repository.dart';
 import 'package:parkspot/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:parkspot/features/bookings/data/bookings_repository_impl.dart';
+import 'package:parkspot/features/bookings/domain/bookings_repository.dart';
+import 'package:parkspot/features/bookings/domain/checkout_flow.dart';
 import 'package:parkspot/features/lots/data/lots_repository_impl.dart';
 import 'package:parkspot/features/lots/domain/lots_repository.dart';
 import 'package:parkspot/features/onboarding/data/prefs_onboarding_status.dart';
@@ -52,12 +56,16 @@ Future<void> configureDependencies(AppConfig config) async {
     refresher: refresher,
   );
 
+  final bookings = BookingsRepositoryImpl(dio);
+
   getIt
     ..registerSingleton<Dio>(dio)
     ..registerSingleton<OnboardingStatus>(PrefsOnboardingStatus(prefs))
     ..registerSingleton<AuthRepository>(auth)
     ..registerSingleton<LotsRepository>(LotsRepositoryImpl(dio))
     ..registerSingleton(LocationService(prefs))
+    ..registerSingleton<BookingsRepository>(bookings)
+    ..registerSingleton(CheckoutFlow(bookings, RazorpayCheckout()))
     ..registerSingleton<AuthBloc>(
       AuthBloc(repository: auth, sessionExpired: sessionExpired.stream)
         ..add(const AuthSessionRestoreRequested()),

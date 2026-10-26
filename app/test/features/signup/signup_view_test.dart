@@ -12,6 +12,7 @@ import 'package:parkspot/features/signup/presentation/bloc/signup_bloc.dart';
 import 'package:parkspot/features/signup/presentation/screen/signup_page.dart';
 
 import '../../helpers/mocks.dart';
+import '../../helpers/pump_themed.dart';
 
 class MockSignupBloc extends MockBloc<SignupEvent, SignupState>
     implements SignupBloc {}
@@ -29,19 +30,21 @@ void main() {
     when(() => auth.state).thenReturn(const AuthState.unauthenticated());
   });
 
-  Future<void> pump(WidgetTester tester, {bool dark = false}) =>
-      tester.pumpWidget(
-        MaterialApp(
-          theme: dark ? AppTheme.dark() : AppTheme.light(),
-          home: MultiBlocProvider(
-            providers: [
-              BlocProvider<AuthBloc>.value(value: auth),
-              BlocProvider<SignupBloc>.value(value: bloc),
-            ],
-            child: SignupView(onLogIn: () => logInTaps++),
-          ),
+  Future<void> pump(WidgetTester tester, {bool dark = false}) async {
+    tester.usePhoneSize();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: dark ? AppTheme.dark() : AppTheme.light(),
+        home: MultiBlocProvider(
+          providers: [
+            BlocProvider<AuthBloc>.value(value: auth),
+            BlocProvider<SignupBloc>.value(value: bloc),
+          ],
+          child: SignupView(onLogIn: () => logInTaps++),
         ),
-      );
+      ),
+    );
+  }
 
   const labels = ['Your name', 'Email', 'Password', 'Confirm password'];
   Finder field(String label) =>

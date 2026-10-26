@@ -7,10 +7,13 @@ import 'package:go_router/go_router.dart';
 import 'package:parkspot/dev/component_gallery_page.dart';
 import 'package:parkspot/dev/route_placeholder_page.dart';
 import 'package:parkspot/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:parkspot/features/booking/presentation/screen/booking_page.dart';
 import 'package:parkspot/features/login/presentation/screen/login_page.dart';
 import 'package:parkspot/features/map/presentation/screen/map_page.dart';
 import 'package:parkspot/features/onboarding/domain/onboarding_status.dart';
 import 'package:parkspot/features/onboarding/presentation/onboarding_page.dart';
+import 'package:parkspot/features/payment_result/presentation/screen/payment_failed_page.dart';
+import 'package:parkspot/features/payment_result/presentation/screen/payment_success_page.dart';
 import 'package:parkspot/features/permission/presentation/permission_page.dart';
 import 'package:parkspot/features/signup/presentation/screen/signup_page.dart';
 import 'package:parkspot/features/splash/presentation/splash_page.dart';
@@ -83,41 +86,20 @@ GoRouter createAppRouter({
           ),
           GoRoute(
             path: 'lots/:lotId/book',
-            builder: (context, state) => RoutePlaceholderPage(
-              title: 'Book lot ${state.pathParameters['lotId']}',
-              actions: [
-                PlaceholderAction.go(
-                  'Pay (succeeds)',
-                  AppRoutes.bookingPaid(_demoBooking),
-                ),
-                PlaceholderAction.go(
-                  'Pay (fails)',
-                  AppRoutes.bookingFailed(_demoBooking),
-                ),
-              ],
-            ),
+            builder: (context, state) =>
+                BookingPage(lotId: state.pathParameters['lotId']!),
           ),
           // Before the pass: '/bookings/:id' would otherwise claim these.
           GoRoute(
             path: 'bookings/:bookingId/paid',
-            builder: (context, state) => RoutePlaceholderPage(
-              title: 'Payment successful',
-              actions: [
-                PlaceholderAction.go(
-                  'Show my pass',
-                  AppRoutes.booking(state.pathParameters['bookingId']!),
-                ),
-              ],
+            builder: (context, state) => PaymentSuccessPage(
+              bookingId: state.pathParameters['bookingId']!,
             ),
           ),
           GoRoute(
             path: 'bookings/:bookingId/failed',
-            builder: (context, state) => RoutePlaceholderPage(
-              title: 'Payment failed',
-              actions: [
-                PlaceholderAction.go('Try again', AppRoutes.book(_demoLot)),
-                const PlaceholderAction.go('Back to the map', AppRoutes.home),
-              ],
+            builder: (context, state) => PaymentFailedPage(
+              bookingId: state.pathParameters['bookingId']!,
             ),
           ),
           GoRoute(
@@ -159,6 +141,3 @@ String _keepFrom(String path, GoRouterState state) =>
 
 void _logOut(BuildContext context) =>
     context.read<AuthBloc>().add(const AuthLogoutRequested());
-
-const _demoLot = 'demo-lot';
-const _demoBooking = 'demo-booking';

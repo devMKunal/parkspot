@@ -6,6 +6,7 @@ import 'package:parkspot/core/theme/app_theme.dart';
 import 'package:parkspot/features/permission/presentation/permission_page.dart';
 
 import '../../helpers/mocks.dart';
+import '../../helpers/pump_themed.dart';
 
 void main() {
   late MockLocationService location;
@@ -18,6 +19,7 @@ void main() {
 
   /// The map pushes the rationale and waits for a bool.
   Future<void> pumpFromMap(WidgetTester tester, {bool dark = false}) async {
+    tester.usePhoneSize();
     final router = GoRouter(
       routes: [
         GoRoute(

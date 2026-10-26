@@ -8,14 +8,13 @@ import 'package:parkspot/core/di/injector.dart';
 import 'package:parkspot/core/extensions/context_x.dart';
 import 'package:parkspot/core/location/location_service.dart';
 import 'package:parkspot/core/theme/app_spacing.dart';
+import 'package:parkspot/core/utils/directions.dart';
 import 'package:parkspot/core/widgets/chunky_button.dart';
-import 'package:parkspot/features/lots/domain/lot.dart';
 import 'package:parkspot/features/map/presentation/bloc/map_bloc.dart';
 import 'package:parkspot/features/map/presentation/widgets/lot_sheet.dart';
 import 'package:parkspot/features/map/presentation/widgets/lots_map.dart';
 import 'package:parkspot/features/map/presentation/widgets/map_header.dart';
 import 'package:parkspot/router/app_routes.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class MapPage extends StatelessWidget {
   const MapPage({super.key});
@@ -77,20 +76,6 @@ class _MapViewState extends State<MapView> {
       );
   }
 
-  Future<void> _directions(Lot lot) async {
-    final url = Uri.https('www.google.com', '/maps/dir/', {
-      'api': '1',
-      'destination': '${lot.location.lat},${lot.location.lng}',
-      'travelmode': 'driving',
-    });
-    final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
-    if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Couldn't open directions.")),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return MultiBlocListener(
@@ -147,7 +132,8 @@ class _MapViewState extends State<MapView> {
                     ),
                     LotSheet(
                       onBook: (lot) => context.go(AppRoutes.book(lot.id)),
-                      onDirections: (lot) => unawaited(_directions(lot)),
+                      onDirections: (lot) =>
+                          unawaited(openDirections(context, lot.location)),
                     ),
                   ],
                 ),

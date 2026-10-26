@@ -12,6 +12,7 @@ import 'package:parkspot/features/map/presentation/bloc/map_bloc.dart';
 import 'package:parkspot/features/map/presentation/screen/map_page.dart';
 
 import '../../helpers/mocks.dart';
+import '../../helpers/pump_themed.dart';
 
 class MockMapBloc extends MockBloc<MapEvent, MapState> implements MapBloc {}
 
@@ -35,6 +36,7 @@ void main() {
     MapState state, {
     bool dark = false,
   }) async {
+    tester.usePhoneSize();
     when(() => bloc.state).thenReturn(state);
     final router = GoRouter(
       routes: [

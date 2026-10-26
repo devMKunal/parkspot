@@ -5,6 +5,7 @@ import 'package:parkspot/core/extensions/context_x.dart';
 import 'package:parkspot/core/location/location_service.dart';
 import 'package:parkspot/core/theme/app_spacing.dart';
 import 'package:parkspot/core/widgets/chunky_button.dart';
+import 'package:parkspot/core/widgets/fill_scroll_view.dart';
 import 'package:parkspot/router/app_routes.dart';
 
 /// Why we ask, shown once before the OS prompt. Pops `true` when location
@@ -43,7 +44,7 @@ class _PermissionPageState extends State<PermissionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        child: FillScrollView(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.xxl,
             AppSpacing.xxxl * 2,

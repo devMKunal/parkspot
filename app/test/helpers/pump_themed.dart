@@ -14,4 +14,12 @@ extension PumpThemed on WidgetTester {
       ),
     );
   }
+
+  /// A 390×844 phone, the design's frame, instead of the 800×600 default.
+  void usePhoneSize() {
+    view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(view.reset);
+  }
 }

@@ -88,4 +88,24 @@ void main() {
       );
     });
   });
+
+  test('time ranges', () {
+    final now = DateTime(2026, 10, 19, 9);
+    final evening = DateTime(2026, 10, 19, 18, 30);
+    final later = DateTime(2026, 10, 19, 20, 30);
+    final lateMorning = DateTime(2026, 10, 20, 11, 30);
+    final afternoon = DateTime(2026, 10, 20, 13, 30);
+
+    expect(Formatters.time(evening), '6:30 PM');
+    expect(Formatters.timeRange(evening, later), '6:30 to 8:30 PM');
+    expect(Formatters.timeRange(lateMorning, afternoon), '11:30 AM to 1:30 PM');
+    expect(
+      Formatters.slotWindow(evening, later, now: now),
+      'Today, 6:30 to 8:30 PM',
+    );
+    expect(
+      Formatters.slotWindow(lateMorning, afternoon, now: now),
+      'Tomorrow, 11:30 AM to 1:30 PM',
+    );
+  });
 }
