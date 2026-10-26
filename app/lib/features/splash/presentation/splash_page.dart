@@ -5,14 +5,21 @@ import 'package:flutter/services.dart';
 import 'package:parkspot/core/extensions/context_x.dart';
 import 'package:parkspot/core/theme/app_spacing.dart';
 import 'package:parkspot/core/widgets/brand_mark.dart';
+import 'package:parkspot/core/widgets/chunky_button.dart';
 
 /// The cold-start screen, shown while the session is checked.
 ///
 /// It never navigates: the router's redirect moves the user on as soon as
 /// the auth status leaves `unknown`. The colour matches the native launch
 /// screen, so there is no flash between the two.
+///
+/// With [error] (offline at launch) the dots give way to the message and a
+/// retry, since the session can't be checked and logging out would be wrong.
 class SplashPage extends StatelessWidget {
-  const SplashPage({super.key});
+  const SplashPage({this.error, this.onRetry, super.key});
+
+  final String? error;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -44,12 +51,33 @@ class SplashPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xxxl),
-                  _LoadingDots(color: onBrand),
+                  if (error == null) _LoadingDots(color: onBrand),
                 ],
               ),
             ),
           ),
         ),
+        bottomNavigationBar: error == null
+            ? null
+            : SafeArea(
+                minimum: const EdgeInsets.all(AppSpacing.xxl),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      error!,
+                      textAlign: TextAlign.center,
+                      style: context.text.bodyMedium?.copyWith(color: onBrand),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    ChunkyButton(
+                      label: 'Try again',
+                      variant: ChunkyButtonVariant.accent,
+                      onPressed: onRetry,
+                    ),
+                  ],
+                ),
+              ),
       ),
     );
   }

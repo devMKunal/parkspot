@@ -4,26 +4,20 @@ import 'package:parkspot/core/extensions/context_x.dart';
 import 'package:parkspot/core/theme/app_spacing.dart';
 import 'package:parkspot/core/widgets/brand_mark.dart';
 import 'package:parkspot/core/widgets/chunky_button.dart';
-import 'package:parkspot/dev/dev_session.dart';
 import 'package:parkspot/router/app_routes.dart';
 
-enum StubAuthAction { signIn, signOut }
-
-/// A button on a placeholder: go somewhere, or poke the [DevSession].
+/// A button on a placeholder: go somewhere, or run a callback.
 class PlaceholderAction {
-  const PlaceholderAction.go(this.label, String this.location) : stub = null;
+  const PlaceholderAction.go(this.label, String this.location) : onTap = null;
 
-  /// Runs [stub], then goes to [then] if given. Signing in or out needs no
-  /// [then]: the redirect moves the user.
-  const PlaceholderAction.stub(
+  const PlaceholderAction.run(
     this.label,
-    StubAuthAction this.stub, {
-    String? then,
-  }) : location = then;
+    void Function(BuildContext context) this.onTap,
+  ) : location = null;
 
   final String label;
   final String? location;
-  final StubAuthAction? stub;
+  final void Function(BuildContext context)? onTap;
 }
 
 /// Temporary screen for a route whose real page isn't built yet. It shows
@@ -41,15 +35,7 @@ class RoutePlaceholderPage extends StatelessWidget {
   final List<PlaceholderAction> actions;
 
   void _run(BuildContext context, PlaceholderAction action) {
-    final session = DevSessionScope.maybeOf(context);
-    switch (action.stub) {
-      case StubAuthAction.signIn:
-        session?.signIn();
-      case StubAuthAction.signOut:
-        session?.signOut();
-      case null:
-        break;
-    }
+    action.onTap?.call(context);
     final location = action.location;
     if (location == null) return;
     // Keep a pending deep link alive through onboarding, sign-up and login.

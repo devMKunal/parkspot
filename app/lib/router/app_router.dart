@@ -1,11 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:parkspot/dev/component_gallery_page.dart';
 import 'package:parkspot/dev/route_placeholder_page.dart';
+import 'package:parkspot/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:parkspot/features/login/presentation/screen/login_page.dart';
 import 'package:parkspot/features/onboarding/domain/onboarding_status.dart';
 import 'package:parkspot/features/onboarding/presentation/onboarding_page.dart';
+import 'package:parkspot/features/signup/presentation/screen/signup_page.dart';
 import 'package:parkspot/features/splash/presentation/splash_page.dart';
 import 'package:parkspot/router/app_redirect.dart';
 import 'package:parkspot/router/app_routes.dart';
@@ -38,34 +43,33 @@ GoRouter createAppRouter({
     routes: [
       GoRoute(
         path: AppRoutes.splash,
-        builder: (context, state) => const SplashPage(),
+        builder: (context, state) => BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, auth) => SplashPage(
+            error: auth.restoreError,
+            onRetry: () => context.read<AuthBloc>().add(
+              const AuthSessionRestoreRequested(),
+            ),
+          ),
+        ),
       ),
       GoRoute(
         path: AppRoutes.onboarding,
         builder: (context, state) =>
             OnboardingPage(onFinished: () => unawaited(onboarding.markSeen())),
       ),
-      // TODO(dev): replace each RoutePlaceholderPage with the real screen.
       GoRoute(
         path: AppRoutes.signup,
-        builder: (context, state) => const RoutePlaceholderPage(
-          title: 'Sign up',
-          actions: [
-            PlaceholderAction.stub('Create account', StubAuthAction.signIn),
-            PlaceholderAction.go('I already have an account', AppRoutes.login),
-          ],
+        builder: (context, state) => SignupPage(
+          onLogIn: () => context.go(_keepFrom(AppRoutes.login, state)),
         ),
       ),
       GoRoute(
         path: AppRoutes.login,
-        builder: (context, state) => const RoutePlaceholderPage(
-          title: 'Log in',
-          actions: [
-            PlaceholderAction.stub('Log in', StubAuthAction.signIn),
-            PlaceholderAction.go('New here? Sign up', AppRoutes.signup),
-          ],
+        builder: (context, state) => LoginPage(
+          onSignUp: () => context.go(_keepFrom(AppRoutes.signup, state)),
         ),
       ),
+      // TODO(dev): replace each RoutePlaceholderPage with the real screen.
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) => RoutePlaceholderPage(
@@ -151,9 +155,7 @@ GoRouter createAppRouter({
             path: 'profile',
             builder: (context, state) => const RoutePlaceholderPage(
               title: 'Profile',
-              actions: [
-                PlaceholderAction.stub('Log out', StubAuthAction.signOut),
-              ],
+              actions: [PlaceholderAction.run('Log out', _logOut)],
             ),
           ),
         ],
@@ -166,6 +168,14 @@ GoRouter createAppRouter({
     ],
   );
 }
+
+/// [path] carrying the current page's `?from=`, so a deep link survives
+/// hopping between sign-up and login.
+String _keepFrom(String path, GoRouterState state) =>
+    AppRoutes.withFrom(path, state.uri.queryParameters[AppRoutes.fromParam]);
+
+void _logOut(BuildContext context) =>
+    context.read<AuthBloc>().add(const AuthLogoutRequested());
 
 const _demoLot = 'demo-lot';
 const _demoBooking = 'demo-booking';

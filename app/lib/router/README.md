@@ -20,40 +20,21 @@ Screens never navigate after sign-in, sign-out or session restore. They
 change state, and the redirect re-runs because the router listens to it
 (`refreshListenable`).
 
-## Plugging in AuthBloc
+## Where the auth status comes from
 
-The router only needs a `ValueListenable<AuthStatus>` and an
-`OnboardingStatus` (`lib/features/onboarding/domain/onboarding_status.dart`).
-Today both come from `DevSession` (`lib/dev/dev_session.dart`), a stub that
-fakes the refresh-token check and keeps "onboarding seen" in memory. When
-AuthBloc exists:
+`AuthBloc` (`lib/features/auth/presentation/bloc/auth_bloc.dart`). `app.dart`
+adapts its stream with `StreamValueNotifier` and hands it to
+`createAppRouter`, together with the shared_preferences-backed
+`PrefsOnboardingStatus`; both are built once in `lib/core/di/injector.dart`.
 
-1. On start, AuthBloc reads the refresh token from secure storage
-   (`StorageKeys.refreshToken`). None: emit `unauthenticated`. Found: call
-   `POST /auth/refresh`, then `GET /me`, and emit `authenticated`; on 401,
-   wipe the token and emit `unauthenticated`. Network errors need a
-   decision (retry screen, or let an offline user in with the cached user).
-2. In `app.dart`, create the router from the bloc:
+On start AuthBloc restores the session (`POST /auth/refresh`, then `GET /me`).
+Offline, it stays `unknown` with a `restoreError`, and the splash offers a
+retry instead of logging the user out. Mid-session, the auth interceptor
+reports a dead refresh token and AuthBloc emits `unauthenticated`.
 
-   ```dart
-   final authStatus = StreamValueNotifier(
-     authBloc.stream.map((state) => state.status),
-     initial: authBloc.state.status,
-   );
-   final router = createAppRouter(
-     authStatus: authStatus,
-     onboarding: onboardingStatus, // your shared_preferences-backed one
-     includeDevRoutes: config.isDev,
-   );
-   ```
-
-   Create both once (in a `State` or your DI graph), never in `build`, and
-   dispose them with the app.
-3. Implement `OnboardingStatus` over shared_preferences
-   (`StorageKeys.onboardingSeen`), loaded before the router starts so the
-   splash knows where to go. The onboarding page already calls `markSeen`.
-4. Delete `DevSession`, `DevSessionScope`, `InMemoryOnboardingStatus` and
-   the stub actions on `RoutePlaceholderPage`.
+Sign-up and login pass the new user to AuthBloc (`AuthLoggedIn`); the
+redirect does the rest. Their "Log in" / "Create an account" links keep
+`?from=` so a deep link survives hopping between the two.
 
 ## Placeholders
 
