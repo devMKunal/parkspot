@@ -38,5 +38,5 @@ redirect does the rest. Their "Log in" / "Create an account" links keep
 
 ## Placeholders
 
-Each route without a real screen shows `RoutePlaceholderPage`, with buttons
-for the next steps in the flow. Swap them for real pages as they are built.
+Every route has its real screen now. `RoutePlaceholderPage` is left only as
+the "Nothing here" page for unknown paths.

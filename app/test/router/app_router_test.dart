@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:parkspot/core/di/injector.dart';
 import 'package:parkspot/core/theme/app_theme.dart';
+import 'package:parkspot/core/theme/theme_mode_controller.dart';
 import 'package:parkspot/core/utils/geo_point.dart';
 import 'package:parkspot/core/widgets/chunky_button.dart';
 import 'package:parkspot/features/auth/domain/auth_repository.dart';
@@ -20,6 +21,7 @@ import 'package:parkspot/router/app_router.dart';
 import 'package:parkspot/router/auth_status.dart';
 
 import '../helpers/mocks.dart';
+import '../helpers/prefs.dart';
 
 void main() {
   setUpAll(() => registerFallbackValue(const GeoPoint(0, 0)));
@@ -28,7 +30,7 @@ void main() {
   late InMemoryOnboardingStatus onboarding;
   late GoRouter router;
 
-  setUp(() {
+  setUp(() async {
     repository = MockAuthRepository();
     getIt.registerSingleton<AuthRepository>(repository);
     registerQuietMap(getIt);
@@ -39,7 +41,8 @@ void main() {
     ).thenAnswer((_) async => testLot());
     getIt
       ..registerSingleton<BookingsRepository>(bookings)
-      ..registerSingleton<CheckoutFlow>(MockCheckoutFlow());
+      ..registerSingleton<CheckoutFlow>(MockCheckoutFlow())
+      ..registerSingleton(ThemeModeController(await testPrefs()));
     when(() => repository.logout()).thenAnswer((_) async {});
   });
   tearDown(getIt.reset);

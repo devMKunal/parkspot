@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:parkspot/dev/component_gallery_page.dart';
@@ -16,8 +15,10 @@ import 'package:parkspot/features/onboarding/presentation/onboarding_page.dart';
 import 'package:parkspot/features/payment_result/presentation/screen/payment_failed_page.dart';
 import 'package:parkspot/features/payment_result/presentation/screen/payment_success_page.dart';
 import 'package:parkspot/features/permission/presentation/permission_page.dart';
+import 'package:parkspot/features/profile/presentation/profile_page.dart';
 import 'package:parkspot/features/signup/presentation/screen/signup_page.dart';
 import 'package:parkspot/features/splash/presentation/splash_page.dart';
+import 'package:parkspot/features/trips/presentation/screen/trips_page.dart';
 import 'package:parkspot/router/app_redirect.dart';
 import 'package:parkspot/router/app_routes.dart';
 import 'package:parkspot/router/auth_status.dart';
@@ -75,7 +76,6 @@ GoRouter createAppRouter({
           onSignUp: () => context.go(_keepFrom(AppRoutes.signup, state)),
         ),
       ),
-      // TODO(dev): replace each RoutePlaceholderPage with the real screen.
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) => const MapPage(),
@@ -111,15 +111,11 @@ GoRouter createAppRouter({
           ),
           GoRoute(
             path: 'trips',
-            builder: (context, state) =>
-                const RoutePlaceholderPage(title: 'My trips'),
+            builder: (context, state) => const TripsPage(),
           ),
           GoRoute(
             path: 'profile',
-            builder: (context, state) => const RoutePlaceholderPage(
-              title: 'Profile',
-              actions: [PlaceholderAction.run('Log out', _logOut)],
-            ),
+            builder: (context, state) => const ProfilePage(),
           ),
         ],
       ),
@@ -136,6 +132,3 @@ GoRouter createAppRouter({
 /// hopping between sign-up and login.
 String _keepFrom(String path, GoRouterState state) =>
     AppRoutes.withFrom(path, state.uri.queryParameters[AppRoutes.fromParam]);
-
-void _logOut(BuildContext context) =>
-    context.read<AuthBloc>().add(const AuthLogoutRequested());
