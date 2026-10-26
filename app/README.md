@@ -10,6 +10,13 @@ flutter pub get
 flutter run --dart-define-from-file=env/dev.json
 ```
 
+The map needs a Google Maps SDK key (Maps SDK for Android / iOS enabled). Keep it out of git:
+
+- Android: `MAPS_API_KEY=...` in `android/local.properties`
+- iOS: `MAPS_API_KEY = ...` in `ios/Flutter/Secrets.xcconfig`
+
+Without one the app runs, but the map tiles stay blank. Seed the lots first (`cd ../api && npm run seed`).
+
 `env/dev.json` points at the local API on `http://10.0.2.2:3000/v1` (the host machine as seen from the Android emulator). On the iOS simulator use `localhost`; on a physical phone use your laptop's LAN IP and add it to `android/app/src/debug/res/xml/network_security_config.xml`.
 
 Start the API first (`cd ../api && npm run dev`): the splash restores the session against it. Dev builds also have the **component gallery** at `/dev/gallery`.

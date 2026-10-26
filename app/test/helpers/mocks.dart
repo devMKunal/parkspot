@@ -1,14 +1,55 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/foundation.dart';
+import 'package:get_it/get_it.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:parkspot/core/location/location_service.dart';
+import 'package:parkspot/core/utils/geo_point.dart';
+import 'package:parkspot/core/utils/money.dart';
 import 'package:parkspot/features/auth/domain/auth_repository.dart';
 import 'package:parkspot/features/auth/domain/user.dart';
 import 'package:parkspot/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:parkspot/features/lots/domain/lot.dart';
+import 'package:parkspot/features/lots/domain/lots_repository.dart';
 import 'package:parkspot/features/onboarding/domain/onboarding_status.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 
 class MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
+
+class MockLotsRepository extends Mock implements LotsRepository {}
+
+class MockLocationService extends Mock implements LocationService {}
+
+Lot testLot({
+  String id = 'fc',
+  String name = 'FC Road Multilevel Parking',
+  int free = 37,
+  int total = 120,
+  int pricePaise = 4000,
+  GeoPoint location = const GeoPoint(18.5246, 73.8411),
+}) => Lot(
+  id: id,
+  name: name,
+  address: 'Fergusson College Rd, Shivajinagar',
+  location: location,
+  pricePerHour: Money(pricePaise),
+  totalSlots: total,
+  freeSlots: free,
+);
+
+/// Registers a quiet map in get_it: no location, no lots.
+void registerQuietMap(GetIt getIt) {
+  final lots = MockLotsRepository();
+  final location = MockLocationService();
+  when(location.shouldExplain).thenAnswer((_) async => false);
+  when(location.current).thenAnswer((_) async => null);
+  when(
+    () => lots.nearby(any(), radiusMeters: any(named: 'radiusMeters')),
+  ).thenAnswer((_) async => []);
+  getIt
+    ..registerSingleton<LotsRepository>(lots)
+    ..registerSingleton<LocationService>(location);
+}
 
 final testUser = User(
   id: 'u1',

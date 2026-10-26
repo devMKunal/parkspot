@@ -10,7 +10,8 @@ abstract final class AppConstants {
   static const passwordMaxLength = 128;
 
   // docs/lots-api.md
-  static const nearbyRadiusMeters = 2000; // server default, max 10000
+  static const nearbyRadiusMeters = 2000; // server default
+  static const maxNearbyRadiusMeters = 10000;
   static const nearbyLimit = 50;
   static const mapIdleDebounce = Duration(milliseconds: 400);
 

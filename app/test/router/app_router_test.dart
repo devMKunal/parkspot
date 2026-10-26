@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:parkspot/core/di/injector.dart';
 import 'package:parkspot/core/theme/app_theme.dart';
+import 'package:parkspot/core/utils/geo_point.dart';
 import 'package:parkspot/core/widgets/chunky_button.dart';
 import 'package:parkspot/features/auth/domain/auth_repository.dart';
 import 'package:parkspot/features/auth/domain/user.dart';
@@ -18,6 +19,7 @@ import 'package:parkspot/router/auth_status.dart';
 import '../helpers/mocks.dart';
 
 void main() {
+  setUpAll(() => registerFallbackValue(const GeoPoint(0, 0)));
   late MockAuthRepository repository;
   late AuthBloc auth;
   late InMemoryOnboardingStatus onboarding;
@@ -26,6 +28,7 @@ void main() {
   setUp(() {
     repository = MockAuthRepository();
     getIt.registerSingleton<AuthRepository>(repository);
+    registerQuietMap(getIt);
     when(() => repository.logout()).thenAnswer((_) async {});
   });
   tearDown(getIt.reset);
