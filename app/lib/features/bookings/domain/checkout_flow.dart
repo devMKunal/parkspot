@@ -50,11 +50,46 @@ class CheckoutFlow {
       start: start,
       duration: duration,
     );
+    return await _payAndVerify(
+      booking,
+      order,
+      description: '$lotName · slot ${booking.slotLabel}',
+      email: email,
+      name: name,
+    );
+  }
+
+  /// Buys [by] more time on a live booking (a second, separate payment).
+  /// [PayConfirmed] carries the booking with its new end.
+  Future<PayOutcome> extend({
+    required Booking booking,
+    required String lotName,
+    required Duration by,
+    String? email,
+    String? name,
+  }) async {
+    final order = await _bookings.extend(booking.id, by: by);
+    return await _payAndVerify(
+      booking,
+      order,
+      description: '$lotName · ${by.inMinutes} more minutes',
+      email: email,
+      name: name,
+    );
+  }
+
+  Future<PayOutcome> _payAndVerify(
+    Booking booking,
+    PaymentOrder order, {
+    required String description,
+    String? email,
+    String? name,
+  }) async {
     final result = await _checkout.open(
       keyId: order.keyId,
       orderId: order.orderId,
       amount: order.amount,
-      description: '$lotName · slot ${booking.slotLabel}',
+      description: description,
       email: email,
       name: name,
     );

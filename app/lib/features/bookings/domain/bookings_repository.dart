@@ -18,6 +18,16 @@ abstract interface class BookingsRepository {
     required String signature,
   });
 
+  /// The (simulated) gate scan: CONFIRMED becomes ACTIVE.
+  Future<Booking> checkIn(String id, {required String passCode});
+
+  /// Holds [by] more on the same slot and opens an order for it; paid
+  /// through the same [verifyPayment].
+  Future<PaymentOrder> extend(String id, {required Duration by});
+
+  /// Leaves early: ACTIVE becomes COMPLETED and the slot frees up.
+  Future<Booking> end(String id);
+
   /// Newest first; [statuses] narrows it.
   Future<List<Booking>> mine({Set<BookingStatus>? statuses});
 }

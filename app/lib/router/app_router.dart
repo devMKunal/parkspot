@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:parkspot/dev/component_gallery_page.dart';
 import 'package:parkspot/dev/route_placeholder_page.dart';
+import 'package:parkspot/features/active_booking/presentation/screen/active_booking_page.dart';
 import 'package:parkspot/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:parkspot/features/booking/presentation/screen/booking_page.dart';
 import 'package:parkspot/features/login/presentation/screen/login_page.dart';
@@ -104,11 +105,8 @@ GoRouter createAppRouter({
           ),
           GoRoute(
             path: 'bookings/:bookingId',
-            builder: (context, state) => RoutePlaceholderPage(
-              title: 'Pass ${state.pathParameters['bookingId']}',
-              actions: const [
-                PlaceholderAction.go('Back to the map', AppRoutes.home),
-              ],
+            builder: (context, state) => ActiveBookingPage(
+              bookingId: state.pathParameters['bookingId']!,
             ),
           ),
           GoRoute(

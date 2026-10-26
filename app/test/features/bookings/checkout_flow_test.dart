@@ -133,4 +133,47 @@ void main() {
 
     await expectLater(pay(), throwsA(isA<ApiException>()));
   });
+
+  test('extend pays its own order and returns the longer booking', () async {
+    const extension = PaymentOrder(
+      keyId: 'rzp_test_x',
+      orderId: 'order_ext',
+      amount: Money(2000),
+    );
+    final longer = testBooking(duration: const Duration(minutes: 150));
+    when(
+      () => bookings.extend('b1', by: const Duration(minutes: 30)),
+    ).thenAnswer((_) async => extension);
+    checkoutEndsWith(
+      const CheckoutPaid(
+        orderId: 'order_ext',
+        paymentId: 'pay_2',
+        signature: 'sig2',
+      ),
+    );
+    when(
+      () => bookings.verifyPayment(
+        orderId: 'order_ext',
+        paymentId: 'pay_2',
+        signature: 'sig2',
+      ),
+    ).thenAnswer((_) async => longer);
+
+    final outcome = await flow.extend(
+      booking: confirmed,
+      lotName: 'FC Road',
+      by: const Duration(minutes: 30),
+    );
+
+    expect(outcome, isA<PayConfirmed>());
+    expect(outcome.booking.end, longer.end);
+    verify(
+      () => checkout.open(
+        keyId: 'rzp_test_x',
+        orderId: 'order_ext',
+        amount: const Money(2000),
+        description: 'FC Road · 30 more minutes',
+      ),
+    ).called(1);
+  });
 }

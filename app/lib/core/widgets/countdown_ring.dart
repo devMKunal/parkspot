@@ -5,8 +5,8 @@ import 'package:parkspot/core/extensions/context_x.dart';
 
 /// A ring that empties as booking time runs out, with any [child] centred.
 ///
-/// Stateless on purpose: the active-booking Cubit owns the clock (a ticker
-/// driven by `booking.end`), and passes the fraction left in here.
+/// Stateless on purpose: the active-booking screen owns the clock (a
+/// one-second ticker against `booking.end`) and passes the fraction left.
 class CountdownRing extends StatelessWidget {
   const CountdownRing({
     required this.remaining,

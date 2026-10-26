@@ -146,7 +146,7 @@ void main() {
     await tester.tap(find.widgetWithText(ChunkyButton, 'Log in'));
     await tester.pumpAndSettle();
     expect(location(), '/bookings/b1');
-    expect(find.text('Pass b1'), findsWidgets);
+    expect(find.text('Your pass is ready'), findsOneWidget);
   });
 
   testWidgets('result pages win over the pass route', (tester) async {
