@@ -202,7 +202,7 @@ class _WelcomeArt extends StatelessWidget {
                 child: Container(
                   height: 16,
                   decoration: BoxDecoration(
-                    color: colors.surface,
+                    color: colors.surfaceContainerLowest,
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
@@ -246,7 +246,7 @@ class _WelcomeArt extends StatelessWidget {
                     vertical: AppSpacing.sm,
                   ),
                   decoration: BoxDecoration(
-                    color: colors.surface,
+                    color: colors.surfaceContainerLowest,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: ink, width: 3),
                   ),
