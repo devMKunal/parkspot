@@ -12,7 +12,6 @@ import 'package:parkspot/features/login/presentation/bloc/login_bloc.dart';
 import 'package:parkspot/features/login/presentation/screen/login_page.dart';
 
 import '../../helpers/mocks.dart';
-import '../../helpers/pump_themed.dart';
 
 class MockLoginBloc extends MockBloc<LoginEvent, LoginState>
     implements LoginBloc {}
@@ -28,21 +27,19 @@ void main() {
     when(() => auth.state).thenReturn(const AuthState.unauthenticated());
   });
 
-  Future<void> pump(WidgetTester tester, {bool dark = false}) async {
-    tester.usePhoneSize();
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: dark ? AppTheme.dark() : AppTheme.light(),
-        home: MultiBlocProvider(
-          providers: [
-            BlocProvider<AuthBloc>.value(value: auth),
-            BlocProvider<LoginBloc>.value(value: bloc),
-          ],
-          child: LoginView(onSignUp: () {}),
+  Future<void> pump(WidgetTester tester, {bool dark = false}) =>
+      tester.pumpWidget(
+        MaterialApp(
+          theme: dark ? AppTheme.dark() : AppTheme.light(),
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<AuthBloc>.value(value: auth),
+              BlocProvider<LoginBloc>.value(value: bloc),
+            ],
+            child: LoginView(onSignUp: () {}),
+          ),
         ),
-      ),
-    );
-  }
+      );
 
   for (final dark in [false, true]) {
     testWidgets('renders the design (${dark ? 'dark' : 'light'})', (
