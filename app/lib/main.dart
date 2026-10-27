@@ -6,7 +6,7 @@ import 'package:parkspot/core/theme/theme_mode_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final config = AppConfig.fromEnvironment();
+  final config = await AppConfig.load();
   await configureDependencies(config);
   runApp(
     ParkSpotApp(
