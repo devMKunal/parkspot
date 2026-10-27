@@ -5,7 +5,7 @@ import 'package:parkspot/core/di/injector.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final config = AppConfig.fromEnvironment();
+  final config = await AppConfig.load();
   await configureDependencies(config);
   runApp(ParkSpotApp(config: config, authBloc: getIt(), onboarding: getIt()));
 }
