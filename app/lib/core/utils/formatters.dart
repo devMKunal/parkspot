@@ -6,6 +6,7 @@ abstract final class Formatters {
   // Indian grouping: 1,23,456.
   static final _grouping = NumberFormat.decimalPattern('en_IN');
   static final _time = DateFormat('h:mm a');
+  static final _clock = DateFormat('h:mm');
   static final _day = DateFormat('EEE d MMM');
 
   /// 4000 → ₹40, 4050 → ₹40.50, 12345678 → ₹1,23,456.78.
@@ -57,6 +58,24 @@ abstract final class Formatters {
       _ => _day.format(local),
     };
     return '$day, ${_time.format(local)}';
+  }
+
+  /// "6:30 PM", local time.
+  static String time(DateTime instant) => _time.format(instant.toLocal());
+
+  /// "6:30 to 8:30 PM", or "11:30 AM to 1:30 PM" across noon.
+  static String timeRange(DateTime start, DateTime end) {
+    final from = start.toLocal();
+    final to = end.toLocal();
+    final sameHalf = (from.hour < 12) == (to.hour < 12);
+    return '${sameHalf ? _clock.format(from) : _time.format(from)} to '
+        '${_time.format(to)}';
+  }
+
+  /// "Today, 6:30 to 8:30 PM". Pass [now] in tests.
+  static String slotWindow(DateTime start, DateTime end, {DateTime? now}) {
+    final day = slotTime(start, now: now).split(',').first;
+    return '$day, ${timeRange(start, end)}';
   }
 
   // Calendar-day maths in UTC so a DST shift can't turn one day into 0.96.

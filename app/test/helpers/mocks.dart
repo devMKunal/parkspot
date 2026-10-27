@@ -3,11 +3,15 @@ import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:parkspot/core/location/location_service.dart';
+import 'package:parkspot/core/payments/payment_checkout.dart';
 import 'package:parkspot/core/utils/geo_point.dart';
 import 'package:parkspot/core/utils/money.dart';
 import 'package:parkspot/features/auth/domain/auth_repository.dart';
 import 'package:parkspot/features/auth/domain/user.dart';
 import 'package:parkspot/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:parkspot/features/bookings/domain/booking.dart';
+import 'package:parkspot/features/bookings/domain/bookings_repository.dart';
+import 'package:parkspot/features/bookings/domain/checkout_flow.dart';
 import 'package:parkspot/features/lots/domain/lot.dart';
 import 'package:parkspot/features/lots/domain/lots_repository.dart';
 import 'package:parkspot/features/onboarding/domain/onboarding_status.dart';
@@ -19,6 +23,34 @@ class MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
 class MockLotsRepository extends Mock implements LotsRepository {}
 
 class MockLocationService extends Mock implements LocationService {}
+
+class MockBookingsRepository extends Mock implements BookingsRepository {}
+
+class MockPaymentCheckout extends Mock implements PaymentCheckout {}
+
+class MockCheckoutFlow extends Mock implements CheckoutFlow {}
+
+Booking testBooking({
+  String id = 'b1',
+  BookingStatus status = BookingStatus.confirmed,
+  DateTime? start,
+  Duration duration = const Duration(hours: 2),
+  DateTime? lockExpiresAt,
+  String? passCode = 'PS-7Q2K',
+}) {
+  final from = start ?? DateTime.utc(2026, 10, 19, 13);
+  return Booking(
+    id: id,
+    lotId: 'fc',
+    slotLabel: 'S014',
+    start: from,
+    end: from.add(duration),
+    amount: const Money(8000),
+    status: status,
+    lockExpiresAt: lockExpiresAt,
+    passCode: status.isLive ? passCode : null,
+  );
+}
 
 Lot testLot({
   String id = 'fc',

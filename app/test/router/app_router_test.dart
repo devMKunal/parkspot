@@ -12,6 +12,9 @@ import 'package:parkspot/core/widgets/chunky_button.dart';
 import 'package:parkspot/features/auth/domain/auth_repository.dart';
 import 'package:parkspot/features/auth/domain/user.dart';
 import 'package:parkspot/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:parkspot/features/bookings/domain/bookings_repository.dart';
+import 'package:parkspot/features/bookings/domain/checkout_flow.dart';
+import 'package:parkspot/features/lots/domain/lots_repository.dart';
 import 'package:parkspot/features/splash/presentation/splash_page.dart';
 import 'package:parkspot/router/app_router.dart';
 import 'package:parkspot/router/auth_status.dart';
@@ -29,6 +32,14 @@ void main() {
     repository = MockAuthRepository();
     getIt.registerSingleton<AuthRepository>(repository);
     registerQuietMap(getIt);
+    final bookings = MockBookingsRepository();
+    when(() => bookings.get('b1')).thenAnswer((_) async => testBooking());
+    when(
+      () => getIt<LotsRepository>().byId('fc'),
+    ).thenAnswer((_) async => testLot());
+    getIt
+      ..registerSingleton<BookingsRepository>(bookings)
+      ..registerSingleton<CheckoutFlow>(MockCheckoutFlow());
     when(() => repository.logout()).thenAnswer((_) async {});
   });
   tearDown(getIt.reset);
@@ -145,7 +156,7 @@ void main() {
 
     router.go('/bookings/b1/paid');
     await tester.pumpAndSettle();
-    expect(find.text('Payment successful'), findsWidgets);
+    expect(find.text("You're parked!"), findsOneWidget);
 
     await tester.tap(find.text('Show my pass'));
     await tester.pumpAndSettle();
