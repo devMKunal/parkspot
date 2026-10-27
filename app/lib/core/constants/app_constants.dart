@@ -4,6 +4,11 @@
 /// and validation can render before a request. Each group names the doc it
 /// mirrors so a contract change is easy to chase.
 abstract final class AppConstants {
+  // api/src/modules/auth/auth.schemas.ts
+  static const nameMaxLength = 80;
+  static const passwordMinLength = 8;
+  static const passwordMaxLength = 128;
+
   // docs/lots-api.md
   static const nearbyRadiusMeters = 2000; // server default, max 10000
   static const nearbyLimit = 50;

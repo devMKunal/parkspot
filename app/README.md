@@ -10,9 +10,23 @@ flutter pub get
 flutter run --dart-define-from-file=env/dev.json
 ```
 
-`env/dev.json` points at the local API on `http://10.0.2.2:3000/v1` (the host machine as seen from the Android emulator). On the iOS simulator use `localhost`; on a physical phone use your laptop's LAN IP and add it to `android/app/src/debug/res/xml/network_security_config.xml`.
+Start the API first (`cd ../api && npm run dev`, port 3000). The app picks the host for the device it runs on:
 
-The app currently opens the **component gallery**, which shows every shared widget. Use the sun/moon button to switch themes.
+| Device | API base URL |
+| --- | --- |
+| Android emulator | `http://10.0.2.2:3000/v1` (the emulator's `localhost` is itself) |
+| iOS simulator | `http://localhost:3000/v1` |
+| Physical phone, same Wi-Fi | `http://<Mac LAN IP>:3000/v1` |
+
+For a physical phone, pass the Mac's IP:
+
+```bash
+flutter run --dart-define-from-file=env/dev.json --dart-define=LAN_HOST=$(ipconfig getifaddr en0)
+```
+
+Another port: `--dart-define=API_PORT=4000`. `API_BASE_URL` overrides all of it (`env/prod.json` sets it).
+
+The splash restores the session against the API. Dev builds also have the **component gallery** at `/dev/gallery`.
 
 ## Layout
 
@@ -21,6 +35,10 @@ lib/
   main.dart, app.dart
   core/
     config/      AppConfig (flavor, API base URL from --dart-define-from-file)
+    di/          injector.dart: the get_it composition root, called from main
+    network/     dio setup, AuthInterceptor (refresh on TOKEN_EXPIRED, single-flight),
+                 ApiException (the {error:{code,message}} envelope; repositories throw only this)
+    storage/     TokenStore: refresh token in secure storage, access token in memory
     constants/   AppConstants (mirrors docs/*.md), StorageKeys
     theme/       AppColors, AppSemanticColors (ThemeExtension), AppTypography,
                  AppSpacing/AppRadius/AppSizes/AppDurations, AppTheme.light()/dark()
@@ -30,7 +48,9 @@ lib/
                  StatTile, AvailabilityBadge, LotMarker, TicketCard + DashedDivider,
                  CountdownRing, StatusChip, AlertBanner, BrandMark, PageDots
   dev/           ComponentGalleryPage (remove before release)
-  features/      <feature>/{data,domain,presentation}  ← next: auth
+  features/      <feature>/{data,domain,presentation}
+                 presentation/ holds bloc/ and screen/. A page provides its bloc
+                 from get_it and wraps a View that tests pump with a mock bloc.
 ```
 
 Widgets read colours only through `Theme.of(context)`, never `AppColors` directly, so dark mode can't be skipped.

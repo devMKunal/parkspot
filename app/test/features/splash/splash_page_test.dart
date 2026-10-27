@@ -41,4 +41,20 @@ void main() {
     // Settles only if nothing is animating.
     await tester.pumpAndSettle();
   });
+
+  testWidgets('offline: shows the reason and a retry', (tester) async {
+    var retries = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: SplashPage(error: 'Offline', onRetry: () => retries++),
+      ),
+    );
+
+    expect(find.text('Offline'), findsOneWidget);
+    await tester.tap(find.text('Try again'));
+    expect(retries, 1);
+    // No dots animating: it settles.
+    await tester.pumpAndSettle();
+  });
 }

@@ -13,6 +13,7 @@ class AppTextField extends StatefulWidget {
     this.controller,
     this.hintText,
     this.helperText,
+    this.helper,
     this.errorText,
     this.keyboardType,
     this.textInputAction,
@@ -20,8 +21,10 @@ class AppTextField extends StatefulWidget {
     this.obscure = false,
     this.enabled = true,
     this.onChanged,
-    this.onSubmitted,
+    this.onFieldSubmitted,
+    this.validator,
     this.focusNode,
+    this.textCapitalization = TextCapitalization.none,
     super.key,
   });
 
@@ -29,6 +32,9 @@ class AppTextField extends StatefulWidget {
   final TextEditingController? controller;
   final String? hintText;
   final String? helperText;
+
+  /// A widget in place of [helperText], e.g. a check icon with the text.
+  final Widget? helper;
 
   /// Shown under the field with an error border; null clears it.
   final String? errorText;
@@ -38,8 +44,10 @@ class AppTextField extends StatefulWidget {
   final bool obscure;
   final bool enabled;
   final ValueChanged<String>? onChanged;
-  final ValueChanged<String>? onSubmitted;
+  final ValueChanged<String>? onFieldSubmitted;
+  final FormFieldValidator<String>? validator;
   final FocusNode? focusNode;
+  final TextCapitalization textCapitalization;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -56,7 +64,8 @@ class _AppTextFieldState extends State<AppTextField> {
       children: [
         Text(widget.label, style: context.text.labelLarge),
         const SizedBox(height: AppSpacing.xs + 2),
-        TextField(
+        TextFormField(
+          textCapitalization: widget.textCapitalization,
           controller: widget.controller,
           focusNode: widget.focusNode,
           enabled: widget.enabled,
@@ -67,11 +76,13 @@ class _AppTextFieldState extends State<AppTextField> {
           textInputAction: widget.textInputAction,
           autofillHints: widget.autofillHints,
           onChanged: widget.onChanged,
-          onSubmitted: widget.onSubmitted,
+          onFieldSubmitted: widget.onFieldSubmitted,
+          validator: widget.validator,
           style: context.text.bodyLarge,
           decoration: InputDecoration(
             hintText: widget.hintText,
             helperText: widget.helperText,
+            helper: widget.helper,
             errorText: widget.errorText,
             errorMaxLines: 2,
             suffixIcon: widget.obscure
