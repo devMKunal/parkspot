@@ -10,6 +10,7 @@ import 'package:parkspot/core/network/auth_interceptor.dart';
 import 'package:parkspot/core/network/session_refresher.dart';
 import 'package:parkspot/core/payments/payment_checkout.dart';
 import 'package:parkspot/core/storage/token_store.dart';
+import 'package:parkspot/core/theme/theme_mode_controller.dart';
 import 'package:parkspot/features/auth/data/auth_repository_impl.dart';
 import 'package:parkspot/features/auth/domain/auth_repository.dart';
 import 'package:parkspot/features/auth/presentation/bloc/auth_bloc.dart';
@@ -61,6 +62,7 @@ Future<void> configureDependencies(AppConfig config) async {
   getIt
     ..registerSingleton<Dio>(dio)
     ..registerSingleton<OnboardingStatus>(PrefsOnboardingStatus(prefs))
+    ..registerSingleton(ThemeModeController(prefs))
     ..registerSingleton<AuthRepository>(auth)
     ..registerSingleton<LotsRepository>(LotsRepositoryImpl(dio))
     ..registerSingleton(LocationService(prefs))
