@@ -56,6 +56,20 @@ class BookingsRepositoryImpl implements BookingsRepository {
   );
 
   @override
+  Future<Booking> checkIn(String id, {required String passCode}) async =>
+      _booking(await _post('/bookings/$id/checkin', {'passCode': passCode}));
+
+  @override
+  Future<PaymentOrder> extend(String id, {required Duration by}) async {
+    final data = await _post('/bookings/$id/extend', {'minutes': by.inMinutes});
+    return PaymentOrder.fromJson(data['payment'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<Booking> end(String id) async =>
+      _booking(await _post('/bookings/$id/end'));
+
+  @override
   Future<List<Booking>> mine({Set<BookingStatus>? statuses}) async {
     final res = await guardApi(
       () => _dio.get<Map<String, dynamic>>(

@@ -101,4 +101,44 @@ void main() {
     expect(api.requests.single.queryParameters, {'status': 'CONFIRMED,ACTIVE'});
     expect(list.single.id, 'b1');
   });
+
+  test('check-in, extend and end hit their endpoints', () async {
+    api
+      ..on(
+        'POST',
+        '/bookings/b1/checkin',
+        (_) => json(200, {'booking': bookingJson('ACTIVE')}),
+      )
+      ..on(
+        'POST',
+        '/bookings/b1/extend',
+        (_) => json(201, {
+          'extension': <String, dynamic>{},
+          'payment': {
+            'keyId': 'rzp_test_x',
+            'orderId': 'order_ext',
+            'amount': 2000,
+            'currency': 'INR',
+          },
+        }),
+      )
+      ..on(
+        'POST',
+        '/bookings/b1/end',
+        (_) => json(200, {'booking': bookingJson('COMPLETED')}),
+      );
+
+    final active = await repository.checkIn('b1', passCode: 'PS-7Q2K');
+    final order = await repository.extend(
+      'b1',
+      by: const Duration(minutes: 30),
+    );
+    final ended = await repository.end('b1');
+
+    expect(api.requests[0].data, {'passCode': 'PS-7Q2K'});
+    expect(api.requests[1].data, {'minutes': 30});
+    expect(active.status, BookingStatus.active);
+    expect(order.orderId, 'order_ext');
+    expect(ended.status, BookingStatus.completed);
+  });
 }
