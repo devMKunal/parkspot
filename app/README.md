@@ -10,9 +10,23 @@ flutter pub get
 flutter run --dart-define-from-file=env/dev.json
 ```
 
-`env/dev.json` points at the local API on `http://10.0.2.2:3000/v1` (the host machine as seen from the Android emulator). On the iOS simulator use `localhost`; on a physical phone use your laptop's LAN IP and add it to `android/app/src/debug/res/xml/network_security_config.xml`.
+Start the API first (`cd ../api && npm run dev`, port 3000). The app picks the host for the device it runs on:
 
-Start the API first (`cd ../api && npm run dev`): the splash restores the session against it. Dev builds also have the **component gallery** at `/dev/gallery`.
+| Device | API base URL |
+| --- | --- |
+| Android emulator | `http://10.0.2.2:3000/v1` (the emulator's `localhost` is itself) |
+| iOS simulator | `http://localhost:3000/v1` |
+| Physical phone, same Wi-Fi | `http://<Mac LAN IP>:3000/v1` |
+
+For a physical phone, pass the Mac's IP:
+
+```bash
+flutter run --dart-define-from-file=env/dev.json --dart-define=LAN_HOST=$(ipconfig getifaddr en0)
+```
+
+Another port: `--dart-define=API_PORT=4000`. `API_BASE_URL` overrides all of it (`env/prod.json` sets it).
+
+The splash restores the session against the API. Dev builds also have the **component gallery** at `/dev/gallery`.
 
 ## Layout
 
