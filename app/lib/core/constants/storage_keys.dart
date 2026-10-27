@@ -6,5 +6,8 @@ abstract final class StorageKeys {
 
   // shared_preferences
   static const onboardingSeen = 'app.onboarding_seen';
+
+  /// The location rationale shows once, before the first OS prompt.
+  static const locationRationaleSeen = 'app.location_rationale_seen';
   static const themeMode = 'app.theme_mode';
 }

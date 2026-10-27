@@ -8,8 +8,10 @@ import 'package:parkspot/dev/component_gallery_page.dart';
 import 'package:parkspot/dev/route_placeholder_page.dart';
 import 'package:parkspot/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:parkspot/features/login/presentation/screen/login_page.dart';
+import 'package:parkspot/features/map/presentation/screen/map_page.dart';
 import 'package:parkspot/features/onboarding/domain/onboarding_status.dart';
 import 'package:parkspot/features/onboarding/presentation/onboarding_page.dart';
+import 'package:parkspot/features/permission/presentation/permission_page.dart';
 import 'package:parkspot/features/signup/presentation/screen/signup_page.dart';
 import 'package:parkspot/features/splash/presentation/splash_page.dart';
 import 'package:parkspot/router/app_redirect.dart';
@@ -72,31 +74,12 @@ GoRouter createAppRouter({
       // TODO(dev): replace each RoutePlaceholderPage with the real screen.
       GoRoute(
         path: AppRoutes.home,
-        builder: (context, state) => RoutePlaceholderPage(
-          title: 'Map',
-          actions: [
-            PlaceholderAction.go('Book a spot', AppRoutes.book(_demoLot)),
-            const PlaceholderAction.go(
-              'Location permission',
-              AppRoutes.permission,
-            ),
-            const PlaceholderAction.go('My trips', AppRoutes.trips),
-            const PlaceholderAction.go('Profile', AppRoutes.profile),
-            if (includeDevRoutes)
-              const PlaceholderAction.go(
-                'Component gallery',
-                AppRoutes.gallery,
-              ),
-          ],
-        ),
+        builder: (context, state) => const MapPage(),
         // Nested under the map, so a deep link still has a back button.
         routes: [
           GoRoute(
             path: 'permission',
-            builder: (context, state) => const RoutePlaceholderPage(
-              title: 'Location permission',
-              actions: [PlaceholderAction.go('Allow', AppRoutes.home)],
-            ),
+            builder: (context, state) => const PermissionPage(),
           ),
           GoRoute(
             path: 'lots/:lotId/book',

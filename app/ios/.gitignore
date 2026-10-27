@@ -32,3 +32,6 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+# Maps API key (MAPS_API_KEY = ...)
+Flutter/Secrets.xcconfig
