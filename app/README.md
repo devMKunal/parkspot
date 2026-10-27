@@ -10,12 +10,34 @@ flutter pub get
 flutter run --dart-define-from-file=env/dev.json
 ```
 
-The map needs a Google Maps SDK key (Maps SDK for Android / iOS enabled). Keep it out of git:
+### Google Maps keys
+
+The map needs a Google Maps key per platform. In [Google Cloud](https://console.cloud.google.com), link billing to a project (map loads in the mobile SDKs are free) and enable **Maps SDK for Android** and **Maps SDK for iOS**. Then, under **APIs & Services → Credentials**, create two API keys:
+
+| Key | Application restriction | API restriction |
+| --- | --- | --- |
+| Android | Android apps: `com.devmkunal.parkspot` + your debug SHA-1 | Maps SDK for Android |
+| iOS | iOS apps: `com.devmkunal.parkspot` | Maps SDK for iOS |
+
+Your debug SHA-1 (each Mac has its own; release builds need the release or Play App Signing SHA-1 too):
+
+```bash
+keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android | grep SHA1
+```
+
+Put the keys in these git-ignored files:
 
 - Android: `MAPS_API_KEY=...` in `android/local.properties`
 - iOS: `MAPS_API_KEY = ...` in `ios/Flutter/Secrets.xcconfig`
 
-Without one the app runs, but the map tiles stay blank. Seed the lots first (`cd ../api && npm run seed`).
+Stop the app and run it again after adding a key; hot restart doesn't pick it up (on iOS, `flutter clean` first). A new key can take a few minutes to start working. Without a key the app still runs, but the map is blank (iOS logs a warning at launch).
+
+### API and lots
+
+The seeded lots are in Pune (`cd ../api && npm run seed`), and the map searches around you, so put the emulator or simulator there:
+
+- Android emulator: **⋯ → Location**, or `adb emu geo fix 73.8567 18.5204` (longitude first). Its default is Mountain View.
+- iOS simulator: `xcrun simctl location booted set 18.5204,73.8567`
 
 Start the API first (`cd ../api && npm run dev`, port 3000). The app picks the host for the device it runs on:
 
