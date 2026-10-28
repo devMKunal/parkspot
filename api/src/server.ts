@@ -47,6 +47,10 @@ async function main(): Promise<void> {
   if (!gateway) logger.warn('Razorpay keys not set: POST /v1/bookings will return 503');
 
   if (gateway && !env.RAZORPAY_WEBHOOK_SECRET) {
+    // Without webhooks, a driver who pays and loses the app before verify is charged with no booking.
+    if (env.NODE_ENV === 'production') {
+      throw new Error('RAZORPAY_WEBHOOK_SECRET is required in production');
+    }
     logger.warn('RAZORPAY_WEBHOOK_SECRET not set: webhooks will be rejected');
   }
 

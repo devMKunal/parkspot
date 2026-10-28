@@ -24,6 +24,14 @@ interface RazorpayOrderResponse {
   status: string;
 }
 
+interface RazorpayPayment {
+  id: string;
+  amount: number;
+  currency: string;
+  /** created | authorized | captured | refunded | failed */
+  status: string;
+}
+
 interface RazorpayWebhookBody {
   event: string;
   payload?: {
@@ -47,7 +55,7 @@ export class RazorpayGateway implements PaymentGateway {
   }
 
   async createOrder(input: CreateOrderInput): Promise<CreatedOrder> {
-    const order = await this.post<RazorpayOrderResponse>('/v1/orders', {
+    const order = await this.request<RazorpayOrderResponse>('POST', '/v1/orders', {
       amount: input.amountPaise,
       currency: input.currency,
       receipt: input.receipt,
@@ -71,36 +79,56 @@ export class RazorpayGateway implements PaymentGateway {
 
     const body = JSON.parse(rawBody.toString('utf8')) as RazorpayWebhookBody;
     const entity = body.payload?.payment?.entity;
+    if (!entity) return { kind: 'ignored', type: body.event };
+    const payment = {
+      orderId: entity.order_id,
+      paymentId: entity.id,
+      amountPaise: entity.amount,
+      currency: entity.currency,
+    };
     // order.paid also carries the payment entity; both confirm the same way (idempotently).
-    if ((body.event === 'payment.captured' || body.event === 'order.paid') && entity) {
-      return {
-        kind: 'payment.captured',
-        payment: {
-          orderId: entity.order_id,
-          paymentId: entity.id,
-          amountPaise: entity.amount,
-          currency: entity.currency,
-        },
-      };
+    if (body.event === 'payment.captured' || body.event === 'order.paid') {
+      return { kind: 'payment.captured', payment };
     }
+    if (body.event === 'payment.authorized') return { kind: 'payment.authorized', payment };
     return { kind: 'ignored', type: body.event };
   }
 
+  async capture(paymentId: string): Promise<void> {
+    const path = `/v1/payments/${encodeURIComponent(paymentId)}`;
+    let payment = await this.request<RazorpayPayment>('GET', path);
+    if (payment.status === 'authorized') {
+      try {
+        payment = await this.request<RazorpayPayment>('POST', `${path}/capture`, {
+          amount: payment.amount,
+          currency: payment.currency,
+        });
+      } catch (err) {
+        // Verify and the webhook raced to capture it: fine if the other one won.
+        payment = await this.request<RazorpayPayment>('GET', path);
+        if (payment.status !== 'captured') throw err;
+      }
+    }
+    if (payment.status !== 'captured') {
+      throw new PaymentProviderError(`Payment ${paymentId} is ${payment.status}, not captured`);
+    }
+  }
+
   async refund(paymentId: string, amountPaise: number): Promise<void> {
-    await this.post(`/v1/payments/${encodeURIComponent(paymentId)}/refund`, {
+    await this.request('POST', `/v1/payments/${encodeURIComponent(paymentId)}/refund`, {
       amount: amountPaise,
       speed: 'normal',
     });
   }
 
-  private async post<T>(path: string, body: unknown): Promise<T> {
+  private async request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
     const auth = Buffer.from(`${this.config.keyId}:${this.config.keySecret}`).toString('base64');
     let res: Response;
     try {
       res = await this.fetchFn(`${this.config.baseUrl ?? 'https://api.razorpay.com'}${path}`, {
-        method: 'POST',
+        method,
         headers: { authorization: `Basic ${auth}`, 'content-type': 'application/json' },
-        body: JSON.stringify(body),
+        body: body === undefined ? undefined : JSON.stringify(body),
         signal: AbortSignal.timeout(this.config.timeoutMs ?? 10_000),
       });
     } catch (err) {

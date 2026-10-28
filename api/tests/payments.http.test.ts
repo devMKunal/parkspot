@@ -9,8 +9,14 @@ async function pendingBooking(slots = 1) {
   const res = await ctx.book(auth).expect(201);
   const verify = (body: object, as = auth) =>
     request(ctx.app).post('/v1/payments/verify').set('authorization', as).send(body);
-  const webhook = (orderId: string, paymentId: string, amount: number, signature?: string) => {
-    const signed = FakePaymentGateway.capturedWebhook(orderId, paymentId, amount);
+  const webhook = (
+    orderId: string,
+    paymentId: string,
+    amount: number,
+    signature?: string,
+    event?: 'payment.captured' | 'payment.authorized',
+  ) => {
+    const signed = FakePaymentGateway.capturedWebhook(orderId, paymentId, amount, event);
     return request(ctx.app)
       .post('/v1/webhooks/razorpay')
       .set('content-type', 'application/json')
@@ -43,6 +49,21 @@ describe('POST /v1/payments/verify', () => {
       status: 'CAPTURED',
       source: 'client',
     });
+  });
+
+  it('captures the payment before confirming (manual-capture accounts)', async () => {
+    const { verify, orderId, payments } = await pendingBooking();
+    await verify(FakePaymentGateway.checkoutSuccess(orderId)).expect(200);
+    expect(payments?.captured).toEqual([`pay_${orderId}`]);
+  });
+
+  it('leaves the booking pending when the capture fails, for the webhook to retry', async () => {
+    const { verify, orderId, payments, bookingRepo, bookingId } = await pendingBooking();
+    payments!.failCapture = true;
+
+    const res = await verify(FakePaymentGateway.checkoutSuccess(orderId)).expect(502);
+    expect(res.body.error.code).toBe('PAYMENT_PROVIDER_ERROR');
+    expect(bookingRepo.rows.get(bookingId)?.status).toBe('PENDING');
   });
 
   it('rejects a forged signature and leaves the booking pending', async () => {
@@ -119,6 +140,23 @@ describe('POST /v1/webhooks/razorpay', () => {
       paymentId: 'pay_hook',
     });
     expect(paymentRepo.rows.get('pay_hook')?.source).toBe('webhook');
+  });
+
+  it('captures an authorized-only payment, then confirms', async () => {
+    const { webhook, orderId, bookingId, bookingRepo, payments } = await pendingBooking();
+
+    await webhook(orderId, 'pay_auth', 8000, undefined, 'payment.authorized').expect(200);
+
+    expect(payments?.captured).toEqual(['pay_auth']);
+    expect(bookingRepo.rows.get(bookingId)?.status).toBe('CONFIRMED');
+  });
+
+  it('answers 502 to an authorized webhook it could not capture, so Razorpay retries', async () => {
+    const { webhook, orderId, bookingId, bookingRepo, payments } = await pendingBooking();
+    payments!.failCapture = true;
+
+    await webhook(orderId, 'pay_auth', 8000, undefined, 'payment.authorized').expect(502);
+    expect(bookingRepo.rows.get(bookingId)?.status).toBe('PENDING');
   });
 
   it('is a no-op after verify already confirmed the same payment', async () => {

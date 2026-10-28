@@ -31,7 +31,10 @@ export interface CapturedPayment {
 }
 
 export type WebhookEvent =
-  { kind: 'payment.captured'; payment: CapturedPayment } | { kind: 'ignored'; type: string };
+  | { kind: 'payment.captured'; payment: CapturedPayment }
+  /** Paid but not captured yet (manual capture): we must capture it. */
+  | { kind: 'payment.authorized'; payment: CapturedPayment }
+  | { kind: 'ignored'; type: string };
 
 /** Server-side gateway port. Razorpay today; Stripe slots in behind the same interface. */
 export interface PaymentGateway {
@@ -43,6 +46,11 @@ export interface PaymentGateway {
   verifyCheckout(result: CheckoutResult): boolean;
   /** Verifies the signature over the exact raw body, then parses it. Null if forged. */
   parseWebhook(rawBody: Buffer, signature: string | undefined): WebhookEvent | null;
+  /**
+   * Makes sure the money is ours: captures an authorized payment, no-op if already captured.
+   * Throws if it can't be captured. An uncaptured payment is auto-refunded by the provider.
+   */
+  capture(paymentId: string): Promise<void>;
   refund(paymentId: string, amountPaise: number): Promise<void>;
 }
 

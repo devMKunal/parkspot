@@ -366,6 +366,14 @@ export class FakePaymentGateway implements PaymentGateway {
     return this.real.parseWebhook(rawBody, signature);
   }
 
+  readonly captured: string[] = [];
+  failCapture = false;
+
+  async capture(paymentId: string) {
+    if (this.failCapture) throw new Error('provider down');
+    if (!this.captured.includes(paymentId)) this.captured.push(paymentId);
+  }
+
   async refund(paymentId: string, amountPaise: number) {
     this.refunds.push({ paymentId, amountPaise });
   }
@@ -379,10 +387,15 @@ export class FakePaymentGateway implements PaymentGateway {
     };
   }
 
-  /** A signed payment.captured webhook body, as Razorpay would POST it. */
-  static capturedWebhook(orderId: string, paymentId: string, amountPaise: number) {
+  /** A signed payment.captured (or .authorized) webhook body, as Razorpay would POST it. */
+  static capturedWebhook(
+    orderId: string,
+    paymentId: string,
+    amountPaise: number,
+    event: 'payment.captured' | 'payment.authorized' = 'payment.captured',
+  ) {
     const body = JSON.stringify({
-      event: 'payment.captured',
+      event,
       payload: {
         payment: {
           entity: {
@@ -390,7 +403,7 @@ export class FakePaymentGateway implements PaymentGateway {
             order_id: orderId,
             amount: amountPaise,
             currency: 'INR',
-            status: 'captured',
+            status: event === 'payment.captured' ? 'captured' : 'authorized',
           },
         },
       },

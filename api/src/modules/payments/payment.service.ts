@@ -29,6 +29,7 @@ export class PaymentService {
       (await this.deps.bookingService.ownerOfOrder(result.orderId)) ??
       (await this.deps.extensionService.ownerOfOrder(result.orderId));
     if (owner !== userId) throw Errors.notFound('Booking');
+    await this.capture(result.paymentId);
 
     const outcome = await this.apply(
       { orderId: result.orderId, paymentId: result.paymentId },
@@ -48,6 +49,8 @@ export class PaymentService {
     const event = gateway.parseWebhook(rawBody, signature);
     if (!event) throw Errors.webhookSignatureInvalid();
     if (event.kind === 'ignored') return;
+    // A failed capture answers 502, so Razorpay retries the event.
+    if (event.kind === 'payment.authorized') await this.capture(event.payment.paymentId);
 
     const outcome = await this.apply(event.payment, 'webhook');
     if (outcome.kind === 'UNKNOWN_ORDER') {
@@ -90,6 +93,19 @@ export class PaymentService {
       // Left visible as REFUND_FAILED for a manual refund from the dashboard.
       logger.error({ err, paymentId }, 'Refund failed');
       await payments.setStatus(paymentId, 'REFUND_FAILED');
+    }
+  }
+
+  /**
+   * With manual capture the checkout only authorizes the payment. Confirming the booking without
+   * capturing would hand out the slot while Razorpay refunds the driver days later.
+   */
+  private async capture(paymentId: string): Promise<void> {
+    try {
+      await this.requireGateway().capture(paymentId);
+    } catch (err) {
+      logger.error({ err, paymentId }, 'Capture failed');
+      throw Errors.paymentProvider();
     }
   }
 

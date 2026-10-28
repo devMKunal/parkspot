@@ -92,6 +92,49 @@ describe('RazorpayGateway signatures', () => {
     ).toBeNull();
   });
 
+  it('captures an authorized payment, skips a captured one, refuses a failed one', async () => {
+    const payment = (status: string) => ({ id: 'pay_1', amount: 8000, currency: 'INR', status });
+    const calls = (fetchFn: ReturnType<typeof vi.fn>) =>
+      fetchFn.mock.calls.map(([url, init]) => `${(init as RequestInit).method} ${url as string}`);
+
+    const authorized = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) =>
+      jsonResponse(200, payment(init?.method === 'GET' ? 'authorized' : 'captured')),
+    );
+    await new RazorpayGateway({ keyId: 'k', keySecret: 's' }, authorized).capture('pay_1');
+    expect(calls(authorized)).toEqual([
+      'GET https://api.razorpay.com/v1/payments/pay_1',
+      'POST https://api.razorpay.com/v1/payments/pay_1/capture',
+    ]);
+    expect(JSON.parse(authorized.mock.calls[1]![1]!.body as string)).toEqual({
+      amount: 8000,
+      currency: 'INR',
+    });
+
+    const captured = vi.fn(async () => jsonResponse(200, payment('captured')));
+    await new RazorpayGateway({ keyId: 'k', keySecret: 's' }, captured).capture('pay_1');
+    expect(captured).toHaveBeenCalledTimes(1);
+
+    const failed = vi.fn(async () => jsonResponse(200, payment('failed')));
+    await expect(
+      new RazorpayGateway({ keyId: 'k', keySecret: 's' }, failed).capture('pay_1'),
+    ).rejects.toBeInstanceOf(PaymentProviderError);
+  });
+
+  it('treats losing a capture race as success', async () => {
+    let gets = 0;
+    const fetchFn = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === 'POST') return jsonResponse(400, { error: 'already captured' });
+      gets += 1;
+      return jsonResponse(200, {
+        id: 'pay_1',
+        amount: 8000,
+        currency: 'INR',
+        status: gets === 1 ? 'authorized' : 'captured',
+      });
+    });
+    await new RazorpayGateway({ keyId: 'k', keySecret: 's' }, fetchFn).capture('pay_1');
+  });
+
   it('refunds through the payments API', async () => {
     const fetchFn = vi.fn(async () => jsonResponse(200, { id: 'rfnd_1' }));
     const g = new RazorpayGateway({ keyId: 'k', keySecret: 's' }, fetchFn);
