@@ -90,6 +90,7 @@ async function main(): Promise<void> {
     extensions,
     payments: paymentService,
     corsOrigins: env.CORS_ORIGINS,
+    trustProxy: env.TRUST_PROXY,
   });
   const server = app.listen(env.PORT, () => logger.info(`API listening on :${env.PORT}`));
 
