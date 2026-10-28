@@ -108,8 +108,12 @@ class CheckoutFlow {
             ),
           );
         } on ApiException catch (e) {
-          // The money moved; only our confirmation was lost.
-          if (e.code == ApiErrorCode.network) return PayPending(booking);
+          // The money moved; only our confirmation was lost, or the capture
+          // hit a Razorpay hiccup. The webhook finishes either way.
+          if (e.code == ApiErrorCode.network ||
+              e.code == ApiErrorCode.paymentProvider) {
+            return PayPending(booking);
+          }
           rethrow;
         }
     }

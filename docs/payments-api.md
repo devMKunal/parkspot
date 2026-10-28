@@ -34,10 +34,10 @@ Both paths call the same `BookingService.confirmPaid`. Whichever arrives first w
 
 ## Endpoints
 
-| Method & path | Auth | Body | Success | Errors |
-|---|---|---|---|---|
-| `POST /v1/payments/verify` | Bearer | `{ orderId, paymentId, signature }` | `200 { booking }` | `400 PAYMENT_SIGNATURE_INVALID`, `404` (unknown order or someone else's), `409 PAYMENT_REFUNDED`, `503 PAYMENTS_UNAVAILABLE` |
-| `POST /v1/webhooks/razorpay` | `X-Razorpay-Signature` | Razorpay event | `200 { ok: true }` for every authentic event, handled or not | `400 WEBHOOK_SIGNATURE_INVALID`, `503` |
+| Method & path                | Auth                   | Body                                | Success                                                      | Errors                                                                                                                                                                                           |
+| ---------------------------- | ---------------------- | ----------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST /v1/payments/verify`   | Bearer                 | `{ orderId, paymentId, signature }` | `200 { booking }`                                            | `400 PAYMENT_SIGNATURE_INVALID`, `404` (unknown order or someone else's), `409 PAYMENT_REFUNDED`, `502 PAYMENT_PROVIDER_ERROR` (capture failed; the webhook retries), `503 PAYMENTS_UNAVAILABLE` |
+| `POST /v1/webhooks/razorpay` | `X-Razorpay-Signature` | Razorpay event                      | `200 { ok: true }` for every authentic event, handled or not | `400 WEBHOOK_SIGNATURE_INVALID`, `502` (capture failed; Razorpay retries), `503`                                                                                                                 |
 
 ## Data model
 
@@ -46,8 +46,8 @@ Both paths call the same `BookingService.confirmPaid`. Whichever arrives first w
 ## Razorpay setup (test mode, free)
 
 1. Sign up at razorpay.com and stay in **Test Mode**. Under Account & Settings → API Keys, generate a key and put it in `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET`.
-2. Under Webhooks → Add, set the URL to `https://<tunnel>/v1/webhooks/razorpay`, choose a secret and set it as `RAZORPAY_WEBHOOK_SECRET`, and subscribe to `payment.captured` and `order.paid`. For local testing, expose port 3000 with `cloudflared tunnel --url http://localhost:3000` or ngrok.
-3. Keep payment capture on automatic (the default). An "authorized" but uncaptured payment never fires `payment.captured`.
+2. Under Webhooks → Add, set the URL to `https://<tunnel>/v1/webhooks/razorpay`, choose a secret and set it as `RAZORPAY_WEBHOOK_SECRET`, and subscribe to `payment.authorized`, `payment.captured` and `order.paid`. The API refuses to start in production without the secret. For local testing, expose port 3000 with `cloudflared tunnel --url http://localhost:3000` or ngrok.
+3. Capture works with either dashboard setting: verify and the `payment.authorized` webhook capture the payment before confirming the booking, so an authorized-only payment can't become a free booking that Razorpay later auto-refunds.
 4. Use the test cards and UPI ids from Razorpay's test-mode docs.
 
 ## Stretch
