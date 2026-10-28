@@ -20,6 +20,9 @@ const EnvSchema = z.object({
   RAZORPAY_KEY_SECRET: optionalString,
   // Dashboard → Webhooks → secret you chose. Without it POST /v1/webhooks/razorpay returns 503.
   RAZORPAY_WEBHOOK_SECRET: optionalString,
+  // Proxy hops in front of the API (1 behind a load balancer). 0 trusts no X-Forwarded-For,
+  // which would otherwise let clients spoof their IP past the rate limit.
+  TRUST_PROXY: z.coerce.number().int().min(0).default(0),
   CORS_ORIGINS: z
     .string()
     .default('')

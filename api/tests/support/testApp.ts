@@ -22,6 +22,8 @@ export interface TestAppOptions {
   now?: () => Date;
   /** Pass null to simulate a server without Razorpay keys. */
   payments?: FakePaymentGateway | null;
+  rateLimit?: boolean;
+  trustProxy?: number;
 }
 
 export function buildTestApp(opts: TestAppOptions = {}) {
@@ -70,7 +72,8 @@ export function buildTestApp(opts: TestAppOptions = {}) {
     bookings,
     extensions,
     payments: paymentService,
-    rateLimit: false,
+    rateLimit: opts.rateLimit ?? false,
+    trustProxy: opts.trustProxy,
   });
   return {
     app,

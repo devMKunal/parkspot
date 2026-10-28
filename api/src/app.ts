@@ -26,6 +26,8 @@ export interface AppDeps {
   extensions: ExtensionService;
   payments: PaymentService;
   corsOrigins?: string[];
+  /** Proxy hops to trust for req.ip; rate limits key on it. */
+  trustProxy?: number;
   /** Off in tests so suites can hammer /login. */
   rateLimit?: boolean;
 }
@@ -35,6 +37,7 @@ export function createApp(deps: AppDeps): Express {
   const app = express();
 
   app.disable('x-powered-by');
+  app.set('trust proxy', deps.trustProxy ?? 0);
   app.use(helmet());
   app.use(cors({ origin: deps.corsOrigins ?? [] }));
   // Webhooks first: they need the raw body for signature checks, before JSON parsing.

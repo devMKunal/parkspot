@@ -29,6 +29,12 @@ describe('loadEnv', () => {
     expect(env.RAZORPAY_WEBHOOK_SECRET).toBe('whsec');
   });
 
+  it('trusts no proxy unless told to, so clients cannot spoof their IP', () => {
+    expect(loadEnv(required).TRUST_PROXY).toBe(0);
+    expect(loadEnv({ ...required, TRUST_PROXY: '1' }).TRUST_PROXY).toBe(1);
+    expect(() => loadEnv({ ...required, TRUST_PROXY: '-1' })).toThrow(/TRUST_PROXY/);
+  });
+
   it('still fails fast when a required value is missing', () => {
     expect(() => loadEnv({ JWT_ACCESS_SECRET: required.JWT_ACCESS_SECRET })).toThrow(/MONGO_URI/);
   });
